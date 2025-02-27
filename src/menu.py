@@ -41,7 +41,7 @@ class Menu:
         self.screen.blit(self.background_surface, (0, 0))
 
         # Tegn tittelen
-        title = self.font.render("Super Smash Bros. Pygame", True, (0, 0, 0))
+        title = self.font.render("Compton Brawl", True, (0, 0, 0))
         title_rect = title.get_rect(center=(self.screen_width // 2, self.screen_height // 6))  # Sentrert øverst
         self.screen.blit(title, title_rect)
 
