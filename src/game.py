@@ -34,6 +34,9 @@ FALL_FAST = 15
 # Lives
 MAX_LIVES = 3
 
+# Amount of Players
+AMOUNT_OF_PLAYERS = 2
+
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, color, controls):
         super().__init__()
@@ -46,6 +49,8 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
         self.lives = MAX_LIVES  # Initialize lives
         self.controls = controls  # Control keys for this player
+        self.jump_count = 0  # Track the number of jumps
+        self.can_double_jump = True  # Allow double jump
 
     def update(self, platforms):
         # Apply gravity
@@ -60,10 +65,17 @@ class Player(pygame.sprite.Sprite):
                     self.rect.bottom = platform.rect.top
                     self.vel_y = 0
                     self.on_ground = True
+                    self.jump_count = 0  # Reset jump count when landing
+                    self.can_double_jump = True  # Reset double jump ability
 
     def jump(self):
         if self.on_ground:
             self.vel_y = -JUMP_STRENGTH
+            self.jump_count += 1
+        elif self.can_double_jump and self.jump_count < 2:  # Allow double jump
+            self.vel_y = -JUMP_STRENGTH
+            self.jump_count += 1
+            self.can_double_jump = False  # Disable double jump after use
 
     def move_left(self):
         self.rect.x -= PLAYER_SPEED
@@ -115,7 +127,10 @@ def main():
     })
 
     all_sprites = pygame.sprite.Group()
-    all_sprites.add(player1, player2, player3)
+    if AMOUNT_OF_PLAYERS == 2:
+        all_sprites.add(player1, player2)
+    if AMOUNT_OF_PLAYERS == 3:
+        all_sprites.add(player1, player2, player3)
 
     # Create platform
     platform = Platform(PLATFORM_X, PLATFORM_Y, PLATFORM_WIDTH, PLATFORM_HEIGHT)
@@ -162,12 +177,21 @@ def main():
         all_sprites.draw(SCREEN)
 
         # Display lives
-        lives_text1 = font.render(f"P1 Lives: {player1.lives}", True, RED)
-        lives_text2 = font.render(f"P2 Lives: {player2.lives}", True, GREEN)
-        lives_text3 = font.render(f"P3 Lives: {player3.lives}", True, BLUE)
-        SCREEN.blit(lives_text1, (20, 20))
-        SCREEN.blit(lives_text2, (20, 100))
-        SCREEN.blit(lives_text3, (20, 180))
+        if AMOUNT_OF_PLAYERS == 2:
+            lives_text1 = font.render(f"P1 Lives: {player1.lives}", True, RED)
+            lives_text2 = font.render(f"P2 Lives: {player2.lives}", True, GREEN)
+        if AMOUNT_OF_PLAYERS == 3:
+            lives_text1 = font.render(f"P1 Lives: {player1.lives}", True, RED)
+            lives_text2 = font.render(f"P2 Lives: {player2.lives}", True, GREEN)
+            lives_text3 = font.render(f"P3 Lives: {player3.lives}", True, BLUE)
+        
+        if AMOUNT_OF_PLAYERS == 2:
+            SCREEN.blit(lives_text1, (20, 20))
+            SCREEN.blit(lives_text2, (20, 100))
+        if AMOUNT_OF_PLAYERS == 3:
+            SCREEN.blit(lives_text1, (20, 20))
+            SCREEN.blit(lives_text2, (20, 100))
+            SCREEN.blit(lives_text3, (20, 180))
 
         pygame.display.flip()
         clock.tick(60)
