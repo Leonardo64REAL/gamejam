@@ -14,6 +14,8 @@ SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREE
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
 
 # Platform dimensions
 PLATFORM_WIDTH = SCREEN_WIDTH // 2
@@ -33,16 +35,17 @@ FALL_FAST = 15
 MAX_LIVES = 3
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y):
+    def __init__(self, x, y, color, controls):
         super().__init__()
         self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
-        self.image.fill(RED)
+        self.image.fill(color)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.vel_y = 0
         self.on_ground = False
         self.lives = MAX_LIVES  # Initialize lives
+        self.controls = controls  # Control keys for this player
 
     def update(self, platforms):
         # Apply gravity
@@ -91,10 +94,28 @@ class Platform(pygame.sprite.Sprite):
 def main():
     clock = pygame.time.Clock()
 
-    # Create player
-    player = Player(SCREEN_WIDTH // 2, PLATFORM_Y - PLAYER_HEIGHT)
+    # Create players
+    player1 = Player(SCREEN_WIDTH // 4, PLATFORM_Y - PLAYER_HEIGHT, RED, {
+        "left": pygame.K_a,
+        "right": pygame.K_d,
+        "jump": pygame.K_w,
+        "fall": pygame.K_s
+    })
+    player2 = Player(SCREEN_WIDTH // 2, PLATFORM_Y - PLAYER_HEIGHT, GREEN, {
+        "left": pygame.K_LEFT,
+        "right": pygame.K_RIGHT,
+        "jump": pygame.K_UP,
+        "fall": pygame.K_DOWN
+    })
+    player3 = Player(3 * SCREEN_WIDTH // 4, PLATFORM_Y - PLAYER_HEIGHT, BLUE, {
+        "left": pygame.K_j,
+        "right": pygame.K_l,
+        "jump": pygame.K_i,
+        "fall": pygame.K_k
+    })
+
     all_sprites = pygame.sprite.Group()
-    all_sprites.add(player)
+    all_sprites.add(player1, player2, player3)
 
     # Create platform
     platform = Platform(PLATFORM_X, PLATFORM_Y, PLATFORM_WIDTH, PLATFORM_HEIGHT)
@@ -116,21 +137,22 @@ def main():
 
         # Player movement
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
-            player.move_left()
-        if keys[pygame.K_RIGHT]:
-            player.move_right()
-        if keys[pygame.K_UP]:
-            player.jump()
-        if keys[pygame.K_DOWN]:
-            player.fall()
+        for player in [player1, player2, player3]:
+            if keys[player.controls["left"]]:
+                player.move_left()
+            if keys[player.controls["right"]]:
+                player.move_right()
+            if keys[player.controls["jump"]]:
+                player.jump()
+            if keys[player.controls["fall"]]:
+                player.fall()
 
-        # Check if player falls off the screen or touches the edges
-        if player.rect.y > SCREEN_HEIGHT+100 or player.rect.x < -100 or player.rect.x > SCREEN_WIDTH + 100 or player.rect.y < -100:
-            if player.lives > 1:
-                player.respawn()  # Respawn if lives remain
-            else:
-                running = False  # Game over if no lives left
+            # Check if player falls off the screen or touches the edges
+            if player.rect.y > SCREEN_HEIGHT + 300 or player.rect.x < -300 or player.rect.x > SCREEN_WIDTH + 300 or player.rect.y < -300:
+                if player.lives > 1:
+                    player.respawn()  # Respawn if lives remain
+                else:
+                    all_sprites.remove(player)  # Remove player if no lives left
 
         # Update
         all_sprites.update(platforms)
@@ -140,8 +162,12 @@ def main():
         all_sprites.draw(SCREEN)
 
         # Display lives
-        lives_text = font.render(f"Lives: {player.lives}", True, WHITE)
-        SCREEN.blit(lives_text, (20, 20))
+        lives_text1 = font.render(f"P1 Lives: {player1.lives}", True, RED)
+        lives_text2 = font.render(f"P2 Lives: {player2.lives}", True, GREEN)
+        lives_text3 = font.render(f"P3 Lives: {player3.lives}", True, BLUE)
+        SCREEN.blit(lives_text1, (20, 20))
+        SCREEN.blit(lives_text2, (20, 100))
+        SCREEN.blit(lives_text3, (20, 180))
 
         pygame.display.flip()
         clock.tick(60)
