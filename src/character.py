@@ -10,9 +10,16 @@ class CharacterSelect:
         self.small_font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 25))
 
         # Karakterer (foreløpig bare navn, kan erstattes med bilder eller annet)
-        self.characters = ["Character 1", "Character 2", "Character 3", "Character 4"]
+        self.characters = ["King Von", "Tyler", "Character 3", "Character 4"]
         self.selected_character = 0  # Hvilken karakter som er valgt (indeks)
 
+        # Last inn bildet for king von
+        self.character1_image = pygame.image.load("assets/images/kingvon.jpg")
+        self.character1_image = pygame.transform.scale(self.character1_image, (self.screen_width // 6 - 4, self.screen_height // 4 - 4))  # Skaler bildet til boksstørrelsen
+
+        #Last inn bildet for tyler
+        self.character2_image = pygame.image.load("assets/images/tyler.jpg")
+        self.character2_image = pygame.transform.scale(self.character2_image, (self.screen_width // 6 - 4, self.screen_height // 4 - 4))  # Skaler bildet til boksstørrelsen
         # Farger
         self.color_normal = (255, 255, 255)  # Hvit farge for uvalgte karakterer
         self.color_selected = (255, 0, 0)  # Rød farge for valgt karakter
@@ -27,19 +34,31 @@ class CharacterSelect:
         self.screen.blit(title, title_rect)
 
         # Tegn karakterboksene
-        character_width = self.screen_width // 10  # Bredden på hver karakterboks
-        character_height = self.screen_height // 6  # Høyden på hver karakterboks
+        character_width = self.screen_width // 6  # Bredden på hver karakterboks
+        character_height = self.screen_height // 4  # Høyden på hver karakterboks
         spacing = self.screen_width // 10  # Avstand mellom boksene
 
+        # Total bredde for alle boksene + mellomrom
+        total_width = len(self.characters) * character_width + (len(self.characters) - 1) * spacing
+
+        # Startposisjon for den første boksen (for å sentrere alle boksene)
+        start_x = (self.screen_width - total_width) // 2
+        y = self.screen_height // 2 - character_height // 2
+
         for i, character in enumerate(self.characters):
-            x = (self.screen_width // 2) - (len(self.characters) * (character_width + spacing)) // 2 + i * (character_width + spacing)
-            y = self.screen_height // 2 - character_height // 2
+            x = start_x + i * (character_width + spacing)
 
             # Tegn en boks for hver karakter
             if i == self.selected_character:
                 pygame.draw.rect(self.screen, self.color_selected, (x, y, character_width, character_height), 5)  # Valgt karakter (rød ramme)
             else:
                 pygame.draw.rect(self.screen, self.color_normal, (x, y, character_width, character_height), 2)  # Uvalgte karakterer (hvit ramme)
+
+            # Tegn bildet for "Character 1" inne i boksen
+            if character == "King Von":
+                self.screen.blit(self.character1_image, (x + 2, y + 2))
+            elif character == "Tyler":
+                self.screen.blit(self.character2_image, (x + 2, y + 2))
 
             # Tegn karakterens navn under boksen
             text = self.small_font.render(character, True, self.color_normal)
