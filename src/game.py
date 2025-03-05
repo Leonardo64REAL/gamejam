@@ -1,9 +1,11 @@
 import pygame
 import sys
-import time  # Import the time module for tracking attack cooldown and cube lifetime
+import time
+import math
 
 # Initialize Pygame
 pygame.init()
+pygame.font.init()
 
 # Screen dimensions
 info = pygame.display.Info()
@@ -27,7 +29,7 @@ PLATFORM_Y = SCREEN_HEIGHT - 200
 # Player dimensions
 PLAYER_WIDTH = 100
 PLAYER_HEIGHT = 100
-PLAYER_SPEED = 8
+PLAYER_SPEED = 9
 GRAVITY = 0.5
 JUMP_STRENGTH = 13
 FALL_FAST = 15
@@ -36,10 +38,10 @@ FALL_FAST = 15
 MAX_LIVES = 3
 
 # Amount of Players
-AMOUNT_OF_PLAYERS = 2
+AMOUNT_OF_PLAYERS = 3
 
 # Attack cooldown (in seconds)
-ATTACK_COOLDOWN = 1  # 1 second cooldown
+ATTACK_COOLDOWN = 0.5  # 1 second cooldown
 
 # Cube lifetime (in seconds)
 CUBE_LIFETIME = 0.1  # Cube will disappear after 0.1 seconds
@@ -66,7 +68,7 @@ class Player(pygame.sprite.Sprite):
         self.last_attack_time = 0  # Track the time of the last attack
         self.last_direction = "none"  # Track the last movement direction
         self.damage_percentage = 0  # Percentage that amplifies knockback resistance
-        self.damage_knockback = 0  # Knockback amount when hit
+        self.damage_knockback = 10  # Knockback amount when hit
 
     def update(self, platforms):
         # Apply gravity
@@ -116,6 +118,7 @@ class Player(pygame.sprite.Sprite):
         self.vel_y = 0
         self.vel_x = 0
         self.lives -= 1  # Lose a life
+        self.damage_percentage = 0
 
     def attack(self, all_sprites):
         """Create a cube at the player's position if the cooldown has passed."""
@@ -129,25 +132,28 @@ class Player(pygame.sprite.Sprite):
         """Apply knockback to the player."""
         # Calculate knockback resistance based on damage_percentage
         resistance = 1 - (self.damage_percentage * KNOCKBACK_RESISTANCE_FACTOR)
-        resistance = max(0, resistance)  # Ensure resistance doesn't go below 0
-        knockback_amount *= resistance
+        knockback_amount *= abs(resistance)
+        temp = -knockback_amount
 
         # Apply knockback in the specified direction
+        print(direction, knockback_amount)
         if direction == "right":
             self.vel_x = knockback_amount
+            self.vel_y = -knockback_amount*0.5
         elif direction == "left":
-            self.vel_x = -knockback_amount
+            self.vel_x = temp
+            self.vel_y = -knockback_amount*0.5
 
 class Cube(pygame.sprite.Sprite):
     def __init__(self, x, y, color, last_direction):
         super().__init__()
-        self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
+        self.image = pygame.Surface((20, PLAYER_HEIGHT))
         self.image.fill((25, 25, 25))  # Dark gray color for the cube
         self.rect = self.image.get_rect()
         self.rect.y = y
         # Adjust the cube's position based on the player's last direction
         if last_direction == "right":
-            self.rect.x = x + 100  # Place the cube to the right of the player
+            self.rect.x = x + 180  # Place the cube to the right of the player
         elif last_direction == "left":
             self.rect.x = x - 100  # Place the cube to the left of the player
         else:
@@ -208,7 +214,7 @@ def main():
     all_sprites.add(platform)
 
     # Font for displaying lives
-    font = pygame.font.Font(None, 74)
+    font = pygame.font.SysFont("arialextrabold", int(SCREEN_HEIGHT / 18))
 
     running = True
     while running:
@@ -223,8 +229,10 @@ def main():
         keys = pygame.key.get_pressed()
         for player in [player1, player2, player3]:
             if keys[player.controls["left"]]:
+                knockback_direction = "left"
                 player.move_left()
             if keys[player.controls["right"]]:
+                knockback_direction = "right"
                 player.move_right()
             if keys[player.controls["jump"]]:
                 player.jump()
@@ -234,18 +242,19 @@ def main():
                 player.attack(all_sprites)
 
             # Check if player falls off the screen or touches the edges
-            if player.rect.y > SCREEN_HEIGHT + 300 or player.rect.x < -300 or player.rect.x > SCREEN_WIDTH + 300 or player.rect.y < -300:
+            if player.rect.y > SCREEN_HEIGHT + SCREEN_HEIGHT//2 or player.rect.x < -(SCREEN_WIDTH//2) or player.rect.x > SCREEN_WIDTH + SCREEN_WIDTH//2 or player.rect.y < -SCREEN_HEIGHT//2:
                 if player.lives > 1:
                     player.respawn()  # Respawn if lives remain
                 else:
                     all_sprites.remove(player)  # Remove player if no lives left
+                    player.lives = 0
 
         # Check for collisions between players and cubes
         for player in [player1, player2, player3]:
             for cube in all_sprites:
                 if isinstance(cube, Cube) and player.rect.colliderect(cube.rect):
                     # Apply knockback to the player
-                    knockback_direction = "right" if cube.rect.x > player.rect.x else "left"
+                    # knockback_direction = "right" if cube.rect.x > player.rect.x else "left"
                     player.apply_knockback(BASE_KNOCKBACK, knockback_direction)
                     player.damage_percentage += 10  # Increase damage_percentage
                     cube.kill()  # Remove the cube after collision
@@ -260,7 +269,7 @@ def main():
         # Draw
         SCREEN.fill(BLACK)
         all_sprites.draw(SCREEN)
-
+        
         # Display lives
         if AMOUNT_OF_PLAYERS == 2:
             lives_text1 = font.render(f"P1 Lives: {player1.lives}", True, RED)
@@ -271,12 +280,19 @@ def main():
             lives_text3 = font.render(f"P3 Lives: {player3.lives}", True, BLUE)
         
         if AMOUNT_OF_PLAYERS == 2:
-            SCREEN.blit(lives_text1, (20, 20))
-            SCREEN.blit(lives_text2, (20, 100))
+            # Center the text horizontally and position it vertically
+            text_rect1 = lives_text1.get_rect(center=((SCREEN_WIDTH // 2) + SCREEN_WIDTH//15, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
+            text_rect2 = lives_text2.get_rect(center=((SCREEN_WIDTH // 2) - SCREEN_WIDTH//15, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
+            SCREEN.blit(lives_text1, text_rect1)
+            SCREEN.blit(lives_text2, text_rect2)
         if AMOUNT_OF_PLAYERS == 3:
-            SCREEN.blit(lives_text1, (20, 20))
-            SCREEN.blit(lives_text2, (20, 100))
-            SCREEN.blit(lives_text3, (20, 180))
+            # Center the text horizontally and position it vertically
+            text_rect1 = lives_text1.get_rect(center=((SCREEN_WIDTH // 2) + SCREEN_WIDTH//8, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
+            text_rect2 = lives_text2.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
+            text_rect3 = lives_text3.get_rect(center=((SCREEN_WIDTH // 2) - SCREEN_WIDTH//8, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
+            SCREEN.blit(lives_text1, text_rect1)
+            SCREEN.blit(lives_text2, text_rect2)
+            SCREEN.blit(lives_text3, text_rect3)
 
         pygame.display.flip()
         clock.tick(60)
