@@ -1,7 +1,22 @@
+"""
+TO DO LIST:
+
+* fikse forskjellige ranged attacks
+* maps
+* tracker for spilleren hvis spilleren er utenfor skjermen
+* Prosent damage for spilleren (knockback)
+    VARIABLE: knockback_amount
+    knockback_amount skal vises på skjermen
+
+
+
+"""
+
 import pygame
 import sys
 import time
 import math
+import random
 
 # Initialize Pygame
 pygame.init()
@@ -38,17 +53,27 @@ FALL_FAST = 15
 MAX_LIVES = 3
 
 # Amount of Players
-AMOUNT_OF_PLAYERS = 3
+AMOUNT_OF_PLAYERS = 2
 
 # Attack cooldown (in seconds)
 ATTACK_COOLDOWN = 0.5  # 1 second cooldown
+RANGED_COOLDOWN = 0.5
+RANGED_LENGTH = 1
+RANGED_RELOAD = 3
 
 # Cube lifetime (in seconds)
 CUBE_LIFETIME = 0.01  # Cube will disappear after 0.1 seconds
 
 # Knockback constants
-BASE_KNOCKBACK = 10  # Base knockback amount
+BASE_KNOCKBACK = 15  # Base knockback amount
 KNOCKBACK_RESISTANCE_FACTOR = 0.1  # How much damage_percentage affects knockback
+
+"""
+SPILLER TYPER.
+class Player innstillinger
+"""
+
+player_class_type = ["king_von", "tyler"]
 
 class Player(pygame.sprite.Sprite):
     def __init__(self, x, y, color, controls):
@@ -65,11 +90,15 @@ class Player(pygame.sprite.Sprite):
         self.controls = controls  # Control keys for this player
         self.can_double_jump = True  # Allow double jump
         self.last_attack_time = 0  # Track the time of the last attack
+        self.last_ranged_time = 0
         self.last_direction = "none"  # Track the last movement direction
-        self.damage_percentage = 0  # Percentage that amplifies knockback resistance
-        self.damage_knockback = 10  # Knockback amount when hit
+        self.damage_knockback = 1  # Knockback amount when hit
         self.jump_count = 0  # Track the number of jumps
         self.jump_button_pressed = False  # Track if the jump button is pressed
+        self.bullet_count = 3
+        self.can_shoot = True
+        self.resistance = 1
+        self.total_damage = 0
 
     def update(self, platforms):
         # Apply gravity
@@ -122,6 +151,15 @@ class Player(pygame.sprite.Sprite):
         self.vel_x = 0
         self.lives -= 1  # Lose a life
         self.damage_percentage = 0
+        self.resistance = 1
+    
+    """
+    ATTACK:
+
+    1. Skaper ATTACK objektet i "all_sprites"
+    2. Sjekker om objekten har stått lengre enn ATTACK_COOLDOWN
+    
+    """
 
     def attack(self, all_sprites):
         """Create a cube at the player's position if the cooldown has passed."""
@@ -137,37 +175,136 @@ class Player(pygame.sprite.Sprite):
             upper_cube = upperCube(self.rect.x, self.rect.y, self.image.get_at((0,0)), self.last_direction)
             all_sprites.add(upper_cube)
             self.last_attack_time = current_time
+    
+    def lowerattack(self, all_sprites):
+        current_time = time.time()
+        if current_time - self.last_attack_time >= ATTACK_COOLDOWN:
+            lower_cube = lowerCube(self.rect.x, self.rect.y, self.image.get_at((0,0)), self.last_direction)
+            all_sprites.add(lower_cube)
+            self.last_attack_time = current_time
+    
+    def rangedattack(self, all_sprites):
+        current_time = time.time()
+        if self.bullet_count <= 0:
+            self.bullet_count = 0
+        if current_time - self.last_ranged_time >= RANGED_COOLDOWN and self.can_shoot:
+            range_cube = rangeCube(self.rect.x, self.rect.y, self.image.get_at((0,0)), self.last_direction)
+            self.bullet_count -= 1
+            all_sprites.add(range_cube)
+            self.last_ranged_time = current_time
+            if self.bullet_count == 0:
+                self.can_shoot = False
+        if current_time - self.last_attack_time >= RANGED_COOLDOWN + RANGED_LENGTH:
+            self.bullet_count = 3
+            self.can_shoot = True
+    
+    """
+    KNOCKBACK:
+
+    1. Lager bare knockback til spilleren
+    2. Regner ut resistance for spilleren og legger til på prosenten.
+
+    """
 
     def apply_knockback(self, knockback_amount, direction):
         """Apply knockback to the player."""
         # Calculate knockback resistance based on damage_percentage
-        resistance = 1 - (self.damage_percentage * KNOCKBACK_RESISTANCE_FACTOR)
-        knockback_amount *= abs(resistance)
+        resistance = 1 * (1  + KNOCKBACK_RESISTANCE_FACTOR * self.damage_knockback)
+        knockback_amount *= resistance
         temp = -knockback_amount
 
         # Apply knockback in the specified direction
-        print(direction, knockback_amount)
         if direction == "right":
             self.vel_x = knockback_amount
-            self.vel_y = -knockback_amount*0.5
+            self.vel_y = -knockback_amount*0.4
         elif direction == "left":
             self.vel_x = temp
-            self.vel_y = -knockback_amount*0.5
+            self.vel_y = -knockback_amount*0.4
+        
+        self.damage_knockback += resistance
     
     def apply_upper_knockback(self, knockback_amount, direction):
-        resistance = 1 - (self.damage_percentage * KNOCKBACK_RESISTANCE_FACTOR)
-        knockback_amount *= abs(resistance)
+        resistance = 1 * (1  + KNOCKBACK_RESISTANCE_FACTOR * self.damage_knockback)
+        knockback_amount *= resistance
         temp = -knockback_amount
 
         # Apply knockback in the specified direction
-        print(direction, knockback_amount)
         if direction == "right":
             self.vel_x = knockback_amount*0.3
             self.vel_y = -knockback_amount*0.4
         elif direction == "left":
             self.vel_x = temp*0.3
             self.vel_y = -knockback_amount*0.4
+        
+        self.damage_knockback += resistance
+    
+    def apply_lower_knockback(self, knockback_amount, direction):
+        resistance = 1 * (1  + KNOCKBACK_RESISTANCE_FACTOR * self.damage_knockback)
+        knockback_amount *= resistance
+        temp = -knockback_amount
 
+        # Apply knockback in the specified direction
+        if direction == "right":
+            self.vel_x = knockback_amount*0.3
+            self.vel_y = knockback_amount*0.5
+        elif direction == "left":
+            self.vel_x = temp*0.3
+            self.vel_y = knockback_amount*0.5
+        
+        self.damage_knockback += resistance
+    
+    def apply_ranged_knockback(self, knockback_amount, direction):
+        resistance = 1 * (1  + KNOCKBACK_RESISTANCE_FACTOR * self.damage_knockback)
+        knockback_amount *= resistance
+        temp = -knockback_amount
+
+        # Apply knockback in the specified direction
+        if direction == "right":
+            self.vel_x = 10
+            self.vel_y = -5
+        elif direction == "left":
+            self.vel_x = -10
+            self.vel_y = -5
+        
+        self.damage_knockback += resistance/2
+
+"""
+RANGED ATTACK:
+Denne skal være basert på de ulike karakterene
+
+
+"""
+
+class rangeCube(pygame.sprite.Sprite):
+    def __init__(self, x, y, color, last_direction):
+        super().__init__()
+        self.image = pygame.Surface((10, 10))
+        self.image.fill((WHITE))
+        self.rect = self.image.get_rect()
+        self.rect.x = x 
+        self.rect.y = y + (PLAYER_HEIGHT//2) - 5
+        self.creation_time = time.time()
+        self.direction = last_direction
+        if self.direction == "right":
+            self.rect.x = x + 100
+        else:
+            self.rect.x = x - 10
+
+    def update(self):
+        current_time = time.time()
+        if current_time - self.creation_time >= RANGED_LENGTH:
+            self.kill()
+        else:
+            if self.direction == "right":
+                self.rect.x += 20
+            elif self.direction == "left":
+                self.rect.x -= 20
+
+"""
+Upper Cube er ned angrepet der den er basert på y aksen.
+DET ER EN ATTACK, IKKE EN UDØDELIG OBJEKT.
+
+"""
 class upperCube(pygame.sprite.Sprite):
     def __init__(self, x, y, color, Last_direction):
         super().__init__()
@@ -182,6 +319,43 @@ class upperCube(pygame.sprite.Sprite):
         current_time = time.time()
         if current_time - self.creation_time >= CUBE_LIFETIME:
             self.kill()
+
+
+"""
+Lower Cube er ned angrepet der den er basert på y aksen.
+DET ER EN ATTACK, IKKE EN UDØDELIG OBJEKT.
+"""
+
+class lowerCube(pygame.sprite.Sprite):
+    def __init__(self, x, y, color, last_direction):
+        super().__init__()
+        self.image = pygame.Surface((PLAYER_WIDTH, 20))
+        self.image.fill((25, 25, 25))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y + 150
+
+        # Adjust the cube's position based on the player's last direction
+        if last_direction == "right":
+            self.rect.x = x + 0  # Place the cube to the right of the player
+        elif last_direction == "left":
+            self.rect.x = x - 0  # Place the cube to the left of the player
+        else:
+            self.rect.x = x  # Default to the player's position
+        self.creation_time = time.time()
+    
+    def update(self):
+        current_time = time.time()
+        if current_time - self.creation_time >= CUBE_LIFETIME:
+            self.kill()
+
+
+"""
+Cube er en attack, ikke spilleren.
+Attacken er basert på x-aksen, altså den ordinære angrepet.
+
+DET ER EN ATTACK, IKKE EN UDØDELIG OBJEKT.
+"""
 
 class Cube(pygame.sprite.Sprite):
     def __init__(self, x, y, color, last_direction):
@@ -216,7 +390,12 @@ class Platform(pygame.sprite.Sprite):
 
 def main():
     clock = pygame.time.Clock()
+    """
 
+    PLAYER CONTROLS
+    For å tilkalle en player sin input, så bruker du ordboken og ordenen inne "left", "right", "attack"
+
+    """
     # Create players
     player1 = Player(SCREEN_WIDTH // 4, PLATFORM_Y - PLAYER_HEIGHT, RED, {
         "left": pygame.K_a,
@@ -224,7 +403,9 @@ def main():
         "jump": pygame.K_w,
         "fall": pygame.K_s,
         "attack": pygame.K_x,
-        "upperattack": pygame.K_c
+        "upperattack": pygame.K_c,
+        "lowerattack": pygame.K_v,
+        "rangeattack": pygame.K_z
     })
     player2 = Player(SCREEN_WIDTH // 2, PLATFORM_Y - PLAYER_HEIGHT, GREEN, {
         "left": pygame.K_LEFT,
@@ -232,7 +413,9 @@ def main():
         "jump": pygame.K_UP,
         "fall": pygame.K_DOWN,
         "attack": pygame.K_m,
-        "upperattack": pygame.K_n
+        "upperattack": pygame.K_n,
+        "lowerattack": pygame.K_b,
+        "rangeattack": pygame.K_COMMA
     })
     player3 = Player(3 * SCREEN_WIDTH // 4, PLATFORM_Y - PLAYER_HEIGHT, BLUE, {
         "left": pygame.K_j,
@@ -240,7 +423,9 @@ def main():
         "jump": pygame.K_i,
         "fall": pygame.K_k,
         "attack": pygame.K_u,
-        "upperattack": pygame.K_y
+        "upperattack": pygame.K_y,
+        "lowerattack": pygame.K_t,
+        "rangeattack": pygame.K_h
     })
 
     all_sprites = pygame.sprite.Group()
@@ -288,6 +473,10 @@ def main():
                 player.attack(all_sprites)
             if keys[player.controls["upperattack"]]:
                 player.upperattack(all_sprites)
+            if keys[player.controls["lowerattack"]]:
+                player.lowerattack(all_sprites)
+            if keys[player.controls["rangeattack"]]:
+                player.rangedattack(all_sprites)
 
             # Check if player falls off the screen or touches the edges
             if player.rect.y > SCREEN_HEIGHT + SCREEN_HEIGHT//2 or player.rect.x < -(SCREEN_WIDTH//2) or player.rect.x > SCREEN_WIDTH + SCREEN_WIDTH//2 or player.rect.y < -SCREEN_HEIGHT//2:
@@ -301,18 +490,24 @@ def main():
         for player in [player1, player2, player3]:
             for cube in all_sprites:
                 if isinstance(cube, Cube) and player.rect.colliderect(cube.rect):
-                    # Apply knockback to the player
-                    # knockback_direction = "right" if cube.rect.x > player.rect.x else "left"
                     player.apply_knockback(BASE_KNOCKBACK, knockback_direction)
-                    player.damage_percentage += 10  # Increase damage_percentage
                     cube.kill()  # Remove the cube after collision
             
             for upper_cube in all_sprites:
                 if isinstance(upper_cube, upperCube) and player.rect.colliderect(upper_cube.rect):
                     player.apply_upper_knockback(BASE_KNOCKBACK, knockback_direction)
-                    player.damage_percentage += 10
                     upper_cube.kill()
-
+            
+            for lower_cube in all_sprites:
+                if isinstance(lower_cube, lowerCube) and player.rect.colliderect(lower_cube.rect):
+                    player.apply_lower_knockback(BASE_KNOCKBACK, knockback_direction)
+                    lower_cube.kill()
+            
+            for range_cube in all_sprites:
+                if isinstance(range_cube, rangeCube) and player.rect.colliderect(range_cube.rect):
+                    player.apply_ranged_knockback(BASE_KNOCKBACK, knockback_direction)
+                    lower_cube.kill()
+            
         # Update all sprites
         for sprite in all_sprites:
             if isinstance(sprite, Player):
