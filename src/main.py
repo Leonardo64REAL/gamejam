@@ -1,6 +1,7 @@
 import pygame
 from menu import Menu
 from character import CharacterSelect
+from s import Game
 
 def main():
     pygame.init()
@@ -11,6 +12,7 @@ def main():
 
     menu = Menu(screen)
     character_select = CharacterSelect(screen)
+    game = Game(screen)
 
     running = True
     current_screen = "menu"  # Starter med menyen
@@ -34,6 +36,9 @@ def main():
                 current_screen = "game"  # Gå til spillet
             else:
                 current_screen = "menu"  # Tilbake til menyen hvis ingen karakter er valgt
+        elif current_screen == "game":
+            game.run()  # Kjør spillet
+            current_screen = "menu"  # Gå tilbake til menyen når spillet er ferdig
 
         pygame.display.flip()
         clock.tick(60)
