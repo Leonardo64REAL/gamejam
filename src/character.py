@@ -10,7 +10,7 @@ class CharacterSelect:
         self.small_font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 25))
 
         # Karakterer (foreløpig bare navn, kan erstattes med bilder eller annet)
-        self.characters = ["King Von", "Tyler", "Character 3", "Character 4"]
+        self.characters = ["King Von", "Tyler", "Chief Keef", "Hector"]
         self.selected_character = 0  # Hvilken karakter som er valgt (indeks)
 
         # Last inn bildet for king von
@@ -20,6 +20,15 @@ class CharacterSelect:
         #Last inn bildet for tyler
         self.character2_image = pygame.image.load("assets/images/tyler.jpg")
         self.character2_image = pygame.transform.scale(self.character2_image, (self.screen_width // 6 - 4, self.screen_height // 4 - 4))  # Skaler bildet til boksstørrelsen
+        
+        #Last inn bildet for cheif keef
+        self.character3_image = pygame.image.load("assets/images/cheif.jpg")
+        self.character3_image = pygame.transform.scale(self.character3_image, (self.screen_width // 6 - 4, self.screen_height // 4 - 4))  # Skaler bildet til boksstørrelsen
+
+        #Last inn bildet for cheif keef
+        self.character4_image = pygame.image.load("assets/images/hector.jpg")
+        self.character4_image = pygame.transform.scale(self.character4_image, (self.screen_width // 6 - 4, self.screen_height // 4 - 4))  # Skaler bildet til boksstørrelsen
+
         # Farger
         self.color_normal = (255, 255, 255)  # Hvit farge for uvalgte karakterer
         self.color_selected = (255, 0, 0)  # Rød farge for valgt karakter
@@ -59,6 +68,10 @@ class CharacterSelect:
                 self.screen.blit(self.character1_image, (x + 2, y + 2))
             elif character == "Tyler":
                 self.screen.blit(self.character2_image, (x + 2, y + 2))
+            elif character == "Chief Keef":
+                self.screen.blit(self.character3_image, (x + 2, y + 2))
+            elif character == "Hector":
+                self.screen.blit(self.character4_image, (x + 2, y + 2))
 
             # Tegn karakterens navn under boksen
             text = self.small_font.render(character, True, self.color_normal)
