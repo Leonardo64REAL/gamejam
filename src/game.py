@@ -73,10 +73,10 @@ SPILLER TYPER.
 class Player innstillinger
 """
 
-player_class_type = ["king_von", "tyler"]
+player_class_type = ["king_von", "tyler", "chief", "hector"]
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, color, controls):
+    def __init__(self, x, y, color, controls, playable_character):
         super().__init__()
         self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
         self.image.fill(color)
@@ -99,6 +99,7 @@ class Player(pygame.sprite.Sprite):
         self.can_shoot = True
         self.resistance = 1
         self.total_damage = 0
+        self.playable_character = playable_character
 
     def update(self, platforms):
         # Apply gravity
@@ -152,6 +153,7 @@ class Player(pygame.sprite.Sprite):
         self.lives -= 1  # Lose a life
         self.damage_percentage = 0
         self.resistance = 1
+        self.damage_knockback = 1
     
     """
     ATTACK:
@@ -183,12 +185,12 @@ class Player(pygame.sprite.Sprite):
             all_sprites.add(lower_cube)
             self.last_attack_time = current_time
     
-    def rangedattack(self, all_sprites):
+    def rangedattack(self, all_sprites, playertype):
         current_time = time.time()
         if self.bullet_count <= 0:
             self.bullet_count = 0
         if current_time - self.last_ranged_time >= RANGED_COOLDOWN and self.can_shoot:
-            range_cube = rangeCube(self.rect.x, self.rect.y, self.image.get_at((0,0)), self.last_direction)
+            range_cube = rangeCube(self.rect.x, self.rect.y, self.image.get_at((0,0)), self.last_direction, playertype)
             self.bullet_count -= 1
             all_sprites.add(range_cube)
             self.last_ranged_time = current_time
@@ -276,15 +278,17 @@ Denne skal være basert på de ulike karakterene
 """
 
 class rangeCube(pygame.sprite.Sprite):
-    def __init__(self, x, y, color, last_direction):
+    def __init__(self, x, y, color, last_direction, playertype):
         super().__init__()
         self.image = pygame.Surface((10, 10))
         self.image.fill((WHITE))
         self.rect = self.image.get_rect()
         self.rect.x = x 
         self.rect.y = y + (PLAYER_HEIGHT//2) - 5
+        self.vel_y = -5 # Tyler class
         self.creation_time = time.time()
         self.direction = last_direction
+        self.player_type = playertype
         if self.direction == "right":
             self.rect.x = x + 100
         else:
@@ -295,10 +299,14 @@ class rangeCube(pygame.sprite.Sprite):
         if current_time - self.creation_time >= RANGED_LENGTH:
             self.kill()
         else:
+            self.vel_y += GRAVITY
             if self.direction == "right":
-                self.rect.x += 20
+                self.rect.x += 20 
             elif self.direction == "left":
                 self.rect.x -= 20
+        
+        if self.player_type == "tyler":
+            self.rect.y += self.vel_y
 
 """
 Upper Cube er ned angrepet der den er basert på y aksen.
@@ -405,8 +413,8 @@ def main():
         "attack": pygame.K_x,
         "upperattack": pygame.K_c,
         "lowerattack": pygame.K_v,
-        "rangeattack": pygame.K_z
-    })
+        "rangeattack": pygame.K_z,
+    }, playable_character="tyler")
     player2 = Player(SCREEN_WIDTH // 2, PLATFORM_Y - PLAYER_HEIGHT, GREEN, {
         "left": pygame.K_LEFT,
         "right": pygame.K_RIGHT,
@@ -416,7 +424,7 @@ def main():
         "upperattack": pygame.K_n,
         "lowerattack": pygame.K_b,
         "rangeattack": pygame.K_COMMA
-    })
+    }, playable_character=None)
     player3 = Player(3 * SCREEN_WIDTH // 4, PLATFORM_Y - PLAYER_HEIGHT, BLUE, {
         "left": pygame.K_j,
         "right": pygame.K_l,
@@ -426,7 +434,7 @@ def main():
         "upperattack": pygame.K_y,
         "lowerattack": pygame.K_t,
         "rangeattack": pygame.K_h
-    })
+    }, playable_character=None)
 
     all_sprites = pygame.sprite.Group()
     if AMOUNT_OF_PLAYERS == 2:
@@ -476,7 +484,7 @@ def main():
             if keys[player.controls["lowerattack"]]:
                 player.lowerattack(all_sprites)
             if keys[player.controls["rangeattack"]]:
-                player.rangedattack(all_sprites)
+                player.rangedattack(all_sprites, player.playable_character)
 
             # Check if player falls off the screen or touches the edges
             if player.rect.y > SCREEN_HEIGHT + SCREEN_HEIGHT//2 or player.rect.x < -(SCREEN_WIDTH//2) or player.rect.x > SCREEN_WIDTH + SCREEN_WIDTH//2 or player.rect.y < -SCREEN_HEIGHT//2:
