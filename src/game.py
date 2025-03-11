@@ -16,29 +16,29 @@ import time
 pygame.init()
 pygame.font.init()
 
-# Grab screen info and set up the display
 info = pygame.display.Info()
 SCREEN_WIDTH = info.current_w
 SCREEN_HEIGHT = info.current_h
 SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
 
-# Load and scale background
 background_img = pygame.image.load("Assets/Images/background_2.png")
 background = pygame.transform.scale(background_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
-# Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED   = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE  = (0, 0, 255)
 
-# Platform sizes
+"""
+Platform størrelser
+"""
 PLATFORM_WIDTH = int(SCREEN_WIDTH / 1.3)
 PLATFORM_HEIGHT = 100
 PLATFORM_X = (SCREEN_WIDTH - PLATFORM_WIDTH) // 2
 PLATFORM_Y = SCREEN_HEIGHT - 200
 
+"""Mini platformer"""
 MINI_PLATFORM_WIDTH = 330
 MINI_PLATFORM_HEIGHT = 30
 MINI_PLATFORM_X = 425
@@ -49,10 +49,10 @@ MINI_PLATFORM_HEIGHT_2 = 30
 MINI_PLATFORM_X_2 = 1180
 MINI_PLATFORM_Y_2 = 645
 
-# Max players
+# Max spillere: fra 2 til 3
 AMOUNT_OF_PLAYERS = 2
 
-# Player constants
+# Konstanter
 PLAYER_WIDTH = 100
 PLAYER_HEIGHT = 100
 PLAYER_SPEED = 10
@@ -61,7 +61,7 @@ JUMP_STRENGTH = 13
 MAX_LIVES = 3
 FALL_FAST = 15
 
-# Attack constants
+# Attack konstant
 ATTACK_COOLDOWN = 0.5
 RANGED_COOLDOWN = 0.5
 RANGED_LENGTH = 1
@@ -71,7 +71,6 @@ BASE_KNOCKBACK = 15
 KNOCKBACK_RESISTANCE_FACTOR = 0.1
 
 class Platform(pygame.sprite.Sprite):
-    """A simple invisible platform collider."""
     def __init__(self, x, y, width, height):
         super().__init__()
         self.image = pygame.Surface((width, height))
@@ -87,7 +86,7 @@ class Player(pygame.sprite.Sprite):
         self.image.fill(color)
         self.rect = self.image.get_rect(topleft=(x, y))
 
-        # Velocity / jumping
+        # vektor og hopp
         self.vel_y = 0
         self.vel_x = 0
         self.on_ground = False
@@ -95,12 +94,12 @@ class Player(pygame.sprite.Sprite):
         self.jump_count = 0
         self.jump_button_pressed = False  # to prevent instant double-jumps
 
-        # Stats
+        # player stats
         self.lives = MAX_LIVES
         self.playable_character = playable_character  # e.g., "tyler"
         self.damage_knockback = 1  # used for knockback progression
 
-        # Attack / direction
+        # attack og retning
         self.last_attack_time = 0
         self.last_ranged_time = 0
         self.last_direction = "none"  # "left" or "right"
@@ -110,16 +109,13 @@ class Player(pygame.sprite.Sprite):
         self.controls = controls
 
     def update(self, platforms):
-        """Handle movement and collisions with platforms."""
-        # Gravity
         self.vel_y += GRAVITY
         self.rect.y += self.vel_y
 
-        # Horizontal friction (for knockback, etc.)
         self.rect.x += self.vel_x
         self.vel_x *= 0.9
 
-        # Check ground collisions
+        """Platform Collision Check"""
         self.on_ground = False
         for platform in platforms:
             if self.rect.colliderect(platform.rect):
@@ -150,12 +146,12 @@ class Player(pygame.sprite.Sprite):
             self.can_double_jump = False
 
     def fall(self):
-        """Force a faster fall."""
+        """Force a faster fall"""
         self.vel_y = 0
         self.rect.y += FALL_FAST
 
     def respawn(self):
-        """Respawn player after falling off-screen."""
+        """Respawn Player når Player er utenfor skjermen"""
         self.rect.x = SCREEN_WIDTH // 2 - PLAYER_WIDTH // 2
         self.rect.y = PLATFORM_Y - PLAYER_HEIGHT
         self.vel_y = 0
@@ -165,28 +161,28 @@ class Player(pygame.sprite.Sprite):
         self.can_double_jump = True
 
     def attack(self, attack_sprites, current_time):
-        """Standard horizontal attack."""
+        """X-akse attack"""
         if (current_time - self.last_attack_time) >= ATTACK_COOLDOWN:
             cube = Cube(self.rect.x, self.rect.y, self.last_direction)
             attack_sprites.add(cube)
             self.last_attack_time = current_time
 
     def upperattack(self, attack_sprites, current_time):
-        """Upward attack."""
+        """Y-akse i player > 0 attack"""
         if (current_time - self.last_attack_time) >= ATTACK_COOLDOWN:
             upper_cube = upperCube(self.rect.x, self.rect.y, self.last_direction)
             attack_sprites.add(upper_cube)
             self.last_attack_time = current_time
 
     def lowerattack(self, attack_sprites, current_time):
-        """Downward attack."""
+        """Y-akse i player < 0 attack"""
         if (current_time - self.last_attack_time) >= ATTACK_COOLDOWN:
             lower_cube = lowerCube(self.rect.x, self.rect.y, self.last_direction)
             attack_sprites.add(lower_cube)
             self.last_attack_time = current_time
 
     def rangedattack(self, attack_sprites, current_time):
-        """Ranged projectile attack; can vary by character."""
+        """Range attack"""
         if self.bullet_count <= 0:
             self.bullet_count = 0
 
@@ -199,12 +195,12 @@ class Player(pygame.sprite.Sprite):
             if self.bullet_count <= 0:
                 self.can_shoot = False
 
-        # After RANGED_LENGTH seconds from the last ranged shot, reload
+        """Etter et vis lengde av tid og skudd"""
         if (current_time - self.last_ranged_time) >= RANGED_LENGTH:
             self.bullet_count = RANGED_RELOAD
             self.can_shoot = True
 
-    # ------------------ Knockback Methods ------------------
+    """# ------------------ Knockback Metoder ------------------"""
     def apply_knockback(self, knockback_amount, direction):
         """Generic side-attack knockback."""
         # The more the player is hit, the larger the knockback
@@ -248,7 +244,6 @@ class Player(pygame.sprite.Sprite):
 
     def apply_ranged_knockback(self, knockback_amount, direction):
         """Knockback specifically for ranged attacks (slightly weaker)."""
-        # You can make this scale up similarly if desired
         if direction == "right":
             self.vel_x = 10
             self.vel_y = -5
@@ -258,10 +253,10 @@ class Player(pygame.sprite.Sprite):
 
         self.damage_knockback += 0.5
 
-# ------------------- Attack Sprite Classes -------------------
+"""# ------------------- Attack Sprite Classes -------------------"""
 
 class Cube(pygame.sprite.Sprite):
-    """Standard horizontal attack hitbox."""
+    """Attack hitbox."""
     def __init__(self, x, y, direction):
         super().__init__()
         self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
@@ -282,7 +277,7 @@ class Cube(pygame.sprite.Sprite):
             self.kill()
 
 class upperCube(pygame.sprite.Sprite):
-    """Upward attack hitbox."""
+    """Attack hitbox."""
     def __init__(self, x, y, direction):
         super().__init__()
         self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
@@ -299,7 +294,7 @@ class upperCube(pygame.sprite.Sprite):
             self.kill()
 
 class lowerCube(pygame.sprite.Sprite):
-    """Downward attack hitbox."""
+    """Attack hitbox."""
     def __init__(self, x, y, direction):
         super().__init__()
         self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
@@ -316,7 +311,7 @@ class lowerCube(pygame.sprite.Sprite):
             self.kill()
 
 class rangeCube(pygame.sprite.Sprite):
-    """Ranged projectile. Different characters can behave differently."""
+    """Attack hitbox."""
     def __init__(self, x, y, direction, player_type):
         super().__init__()
         self.image = pygame.Surface((10, 10))
@@ -329,13 +324,13 @@ class rangeCube(pygame.sprite.Sprite):
             self.rect.x = x + PLAYER_WIDTH
         else:
             self.rect.x = x - 10
-        # Middle of player's height
+        """Fra Player center + x ^^^^^ """
         self.rect.y = y + (PLAYER_HEIGHT // 2) - 5
 
         self.creation_time = time.time()
         self.lifetime = RANGED_LENGTH
 
-        # Gravity-like effect for "tyler" or any special char
+        """FOR TYLER THE CREATOR"""
         self.vel_y = -5 if (player_type == "tyler") else 0
 
     def update(self):
@@ -343,24 +338,24 @@ class rangeCube(pygame.sprite.Sprite):
             self.kill()
             return
 
-        # If "tyler", apply simple gravity
+        """FOR "tyler" """
         if self.player_type == "tyler":
             self.vel_y += GRAVITY
             self.rect.y += self.vel_y
 
-        # Horizontal speed
+        """Hastighet for ranged"""
         speed = 20
         if self.direction == "right":
             self.rect.x += speed
         else:
             self.rect.x -= speed
 
-# ------------------- Main Game Loop -------------------
+"""# ------------------- Main Game Loop -------------------"""
 
 def main():
     clock = pygame.time.Clock()
 
-    # Create players
+    """LAGE SPILLERE"""
     player1 = Player(
         SCREEN_WIDTH // 4, PLATFORM_Y - PLAYER_HEIGHT, RED,
         {
