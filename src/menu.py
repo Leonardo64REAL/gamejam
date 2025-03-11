@@ -19,6 +19,7 @@ class Menu:
         self.background_image = pygame.transform.scale(self.background_image, (self.screen_width, self.screen_height))  # Skaler bildet til skjermstørrelsen
 
         # Lag en overflate for bakgrunnsbildet med alpha (gjennomsiktighet)
+        #testkommentar
         self.background_surface = self.background_image.copy()
         self.background_surface.set_alpha(0)  # Start med fullstendig gjennomsiktig
 
