@@ -399,30 +399,30 @@ def main():
         playable_character=None
     )
 
-    # Add players according to AMOUNT_OF_PLAYERS
+    """Hvor mange spillere"""
     players = []
     if AMOUNT_OF_PLAYERS == 2:
         players = [player1, player2]
     elif AMOUNT_OF_PLAYERS == 3:
         players = [player1, player2, player3]
 
-    # Sprite groups
+    """Sprite groups"""
     all_sprites = pygame.sprite.Group()
     attack_sprites = pygame.sprite.Group()
     all_sprites.add(*players)
 
-    # Create platforms
+    """PLATFORMER"""
     platform_main = Platform(PLATFORM_X, PLATFORM_Y, PLATFORM_WIDTH, PLATFORM_HEIGHT)
     platform_small1 = Platform(MINI_PLATFORM_X, MINI_PLATFORM_Y, MINI_PLATFORM_WIDTH, MINI_PLATFORM_HEIGHT)
     platform_small2 = Platform(MINI_PLATFORM_X_2, MINI_PLATFORM_Y_2, MINI_PLATFORM_WIDTH_2, MINI_PLATFORM_HEIGHT_2)
     platforms = pygame.sprite.Group(platform_main, platform_small1, platform_small2)
 
-    # Font for lives
-    font = pygame.font.SysFont("arialextrabold", int(SCREEN_HEIGHT / 18))
+    """FONT FOR LIVES"""
+    font = pygame.font.Font("assets/fonts/smash_font.ttf", int(SCREEN_HEIGHT/18))
 
     running = True
     while running:
-        current_time = time.time()  # Call once per frame
+        current_time = time.time()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -430,16 +430,16 @@ def main():
                 if event.key == pygame.K_ESCAPE:
                     running = False
 
-        # Handle input for each player
+        """INPUT"""
         keys = pygame.key.get_pressed()
         for player in players:
-            # Horizontal movement
+            """A og D, <- og ->"""
             if keys[player.controls["left"]]:
                 player.move_left()
             if keys[player.controls["right"]]:
                 player.move_right()
 
-            # Jump
+            """JUMP"""
             if keys[player.controls["jump"]]:
                 if not player.jump_button_pressed:
                     player.jump()
@@ -447,11 +447,11 @@ def main():
             else:
                 player.jump_button_pressed = False
 
-            # Fast fall
+            """FAST FALL"""
             if keys[player.controls["fall"]]:
                 player.fall()
 
-            # Attacks
+            """ATTACK"""
             if keys[player.controls["attack"]]:
                 player.attack(attack_sprites, current_time)
             if keys[player.controls["upperattack"]]:
@@ -461,7 +461,7 @@ def main():
             if keys[player.controls["rangeattack"]]:
                 player.rangedattack(attack_sprites, current_time)
 
-            # Out-of-bounds check
+            """OUT OF BOUNDS?"""
             off_screen_y = (
                 player.rect.y > SCREEN_HEIGHT + SCREEN_HEIGHT // 2 or
                 player.rect.y < -SCREEN_HEIGHT // 2
@@ -479,14 +479,14 @@ def main():
                         players.remove(player)
                     player.lives = 0
 
-        # Update players (gravity, collisions with platforms)
+        """Oppdater spiller (gravity, kollisjoner, platformer)"""
         for player in players:
             player.update(platforms)
 
-        # Update attack sprites (lifetimes, movement)
+        """Oppdater ATTACK (livstid+)"""
         attack_sprites.update()
 
-        # Collision detection: each player vs. all attacks
+        """Kollisjon check (attacks)"""
         collided_pairs = []
         for player in players:
             collided_attacks = pygame.sprite.spritecollide(player, attack_sprites, dokill=True)
@@ -502,12 +502,12 @@ def main():
                 elif isinstance(attack_sprite, rangeCube):
                     player.apply_ranged_knockback(BASE_KNOCKBACK, direction)
 
-        # Draw everything
+        """Draw"""
         SCREEN.blit(background, (0, 0))
         all_sprites.draw(SCREEN)
         attack_sprites.draw(SCREEN)
 
-        # Draw lives text
+        """Draw Lives Tekst"""
         if AMOUNT_OF_PLAYERS == 2 and len(players) == 2:
             p1, p2 = players
             lives_text1 = font.render(f"P1 Lives: {p1.lives}", True, RED)
