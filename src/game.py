@@ -23,6 +23,9 @@ SCREEN_WIDTH = info.current_w
 SCREEN_HEIGHT = info.current_h
 SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
 
+background = pygame.image.load("Assets/Images/background_2.png")
+# scaled_background = pygame.transform.smoothscale(background, (SCREEN_WIDTH, SCREEN_HEIGHT))
+
 # farger
 WHITE = (255, 255, 255) 
 BLACK = (0, 0, 0)
@@ -31,10 +34,21 @@ GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 
 # platformen sin størrelse.
-PLATFORM_WIDTH = SCREEN_WIDTH // 2
+PLATFORM_WIDTH = SCREEN_WIDTH // 1.3
 PLATFORM_HEIGHT = 100
 PLATFORM_X = (SCREEN_WIDTH - PLATFORM_WIDTH) // 2
 PLATFORM_Y = SCREEN_HEIGHT - 200
+
+MINI_PLATFORM_WIDTH = 330
+MINI_PLATFORM_HEIGHT = 30
+MINI_PLATFORM_X = 425
+MINI_PLATFORM_Y = 645 #645
+
+MINI_PLATFORM_WIDTH_2 = 330
+MINI_PLATFORM_HEIGHT_2 = 30
+MINI_PLATFORM_X_2 = 1180
+MINI_PLATFORM_Y_2 = 645 #645
+
 
 # Hvor mange spillere (maks 3)
 AMOUNT_OF_PLAYERS = 2
@@ -42,8 +56,8 @@ AMOUNT_OF_PLAYERS = 2
 # hoved player innstillinger (navnet forteller)
 PLAYER_WIDTH = 100
 PLAYER_HEIGHT = 100
-PLAYER_SPEED = 9
-GRAVITY = 0.5
+PLAYER_SPEED = 10
+GRAVITY = 0.5 #0.5
 JUMP_STRENGTH = 13
 MAX_LIVES = 3
 
@@ -123,9 +137,15 @@ class Player(pygame.sprite.Sprite):
         self.on_ground = False
         for platform in platforms:
             if self.rect.colliderect(platform.rect):
-                if self.vel_y > 0:  # faller
+                if self.vel_y > 0 and self.rect.bottom > SCREEN_HEIGHT - 200:  # faller
 
                     # nullstiller hopping
+                    self.rect.bottom = platform.rect.top
+                    self.vel_y = 0
+                    self.on_ground = True
+                    self.jump_count = 0  
+                    self.can_double_jump = True
+                if self.vel_y > 0 and platform.rect.top == 645:# self.rect.y+100 > 645:
                     self.rect.bottom = platform.rect.top
                     self.vel_y = 0
                     self.on_ground = True
@@ -203,6 +223,7 @@ class Player(pygame.sprite.Sprite):
         if current_time - self.last_ranged_time >= RANGED_COOLDOWN and self.can_shoot:
             range_cube = rangeCube(self.rect.x, self.rect.y, self.image.get_at((0,0)), self.last_direction, playertype)
             self.bullet_count -= 1
+            """BARE SYNLIG"""
             all_sprites.add(range_cube)
             self.last_ranged_time = current_time
             if self.bullet_count == 0:
@@ -329,11 +350,11 @@ DET ER EN ATTACK, IKKE EN UDØDELIG OBJEKT.
 class upperCube(pygame.sprite.Sprite):
     def __init__(self, x, y, color, Last_direction):
         super().__init__()
-        self.image = pygame.Surface((PLAYER_WIDTH, 20))
+        self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
         self.image.fill((25, 25, 25))
         self.rect = self.image.get_rect()
         self.rect.x = x
-        self.rect.y = y - 80
+        self.rect.y = y - 130
         self.creation_time = time.time()
     
     def update(self):
@@ -350,11 +371,11 @@ DET ER EN ATTACK, IKKE EN UDØDELIG OBJEKT.
 class lowerCube(pygame.sprite.Sprite):
     def __init__(self, x, y, color, last_direction):
         super().__init__()
-        self.image = pygame.Surface((PLAYER_WIDTH, 20))
+        self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
         self.image.fill((25, 25, 25))
         self.rect = self.image.get_rect()
         self.rect.x = x
-        self.rect.y = y + 150
+        self.rect.y = y + 130
         self.creation_time = time.time()
     
     def update(self):
@@ -373,16 +394,16 @@ DET ER EN ATTACK, IKKE EN UDØDELIG OBJEKT.
 class Cube(pygame.sprite.Sprite):
     def __init__(self, x, y, color, last_direction):
         super().__init__()
-        self.image = pygame.Surface((20, PLAYER_HEIGHT))
+        self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
         self.image.fill((25, 25, 25))
         self.rect = self.image.get_rect()
         self.rect.y = y
         
         """RETNING FOR ATTACK (sjekker sist retning)"""
         if last_direction == "right":
-            self.rect.x = x + 180 # venstre + player_widt + 80 (80 + 20 bredde)
+            self.rect.x = x + 120 # venstre + player_widt + 80 (80 + 20 bredde)
         elif last_direction == "left":
-            self.rect.x = x - 100 # 0 + playerwidt + 20 (bredde)
+            self.rect.x = x - 120 # 0 + playerwidt + 20 (bredde)
         else:
             self.rect.x = x
         self.creation_time = time.time()
@@ -397,7 +418,7 @@ class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         super().__init__()
         self.image = pygame.Surface((width, height))
-        self.image.fill(WHITE)
+        self.image.fill((0, 0, 0, 0))
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
@@ -452,9 +473,17 @@ def main():
 
     # lager platform
     platform = Platform(PLATFORM_X, PLATFORM_Y, PLATFORM_WIDTH, PLATFORM_HEIGHT)
+    mini_platform = Platform(MINI_PLATFORM_X, MINI_PLATFORM_Y, MINI_PLATFORM_WIDTH, MINI_PLATFORM_HEIGHT)
+    mini_platform_2 = Platform(MINI_PLATFORM_X_2, MINI_PLATFORM_Y_2, MINI_PLATFORM_WIDTH_2, MINI_PLATFORM_HEIGHT_2)
     platforms = pygame.sprite.Group()
     platforms.add(platform)
-    all_sprites.add(platform)
+    platforms.add(mini_platform)
+    platforms.add(mini_platform_2)
+
+    """GJØR PLATFORM USYNLIG (JEG IKKE HVORFOR LOL)"""
+    """all_sprites.add(platform)
+    all_sprites.add(mini_platform)
+    all_sprites.add(mini_platform_2)"""
 
     # font
     font = pygame.font.SysFont("arialextrabold", int(SCREEN_HEIGHT / 18))
@@ -540,7 +569,8 @@ def main():
         """
         Plasserer alle objekter og tekst på skjermen for game.py
         """
-        SCREEN.fill(BLACK)
+        # SCREEN.fill(BLACK)
+        SCREEN.blit(background, (0, 0))
         all_sprites.draw(SCREEN)
         
         # viser liv
@@ -562,7 +592,7 @@ def main():
             text_rect1 = lives_text1.get_rect(center=((SCREEN_WIDTH // 2) + SCREEN_WIDTH//8, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
             text_rect2 = lives_text2.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
             text_rect3 = lives_text3.get_rect(center=((SCREEN_WIDTH // 2) - SCREEN_WIDTH//8, SCREEN_HEIGHT - SCREEN_HEIGHT // 15))
-            
+
             SCREEN.blit(lives_text1, text_rect1)
             SCREEN.blit(lives_text2, text_rect2)
             SCREEN.blit(lives_text3, text_rect3)
