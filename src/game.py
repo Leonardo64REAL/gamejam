@@ -108,12 +108,29 @@ class Player(pygame.sprite.Sprite):
 
         self.controls = controls
 
-    def update(self, platforms):
+    def update(self, platforms, joystick = None):
         self.vel_y += GRAVITY
         self.rect.y += self.vel_y
 
         self.rect.x += self.vel_x
         self.vel_x *= 0.9
+
+        # 🎮 Joystick movement
+        if joystick:
+            axis_x = joystick.get_axis(0)  # Left Stick X-axis
+            if axis_x < -0.5:
+                self.move_left()
+            elif axis_x > 0.5:
+                self.move_right()
+
+            if joystick.get_button(0):  # X button (Jump)
+                self.jump()
+            if joystick.get_button(1):  # Circle button (Fast Fall)
+                self.fall()
+            if joystick.get_button(2):  # Square button (Attack)
+                self.attack()
+            if joystick.get_button(3):  # Triangle button (Upper Attack)
+                self.upperattack()
 
         """Platform Collision Check"""
         self.on_ground = False
@@ -429,6 +446,14 @@ def main():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     running = False
+        
+        # 🎮 Detect PS4 Controller
+        if pygame.joystick.get_count() > 0:
+            joystick = pygame.joystick.Joystick(0)
+            joystick.init()
+        else:
+            joystick = None  # No controller detected
+
 
         """INPUT"""
         keys = pygame.key.get_pressed()
@@ -480,8 +505,14 @@ def main():
                     player.lives = 0
 
         """Oppdater spiller (gravity, kollisjoner, platformer)"""
+        if pygame.joystick.get_count() > 0:
+            joystick = pygame.joystick.Joystick(0)
+            joystick.init()
+        else:
+            joystick = None  # No controller connected
+            
         for player in players:
-            player.update(platforms)
+            player.update(platforms, joystick)
 
         """Oppdater ATTACK (livstid+)"""
         attack_sprites.update()
