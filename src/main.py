@@ -9,39 +9,35 @@ def main():
     pygame.display.set_caption("Super Smash Bros. Pygame Edition")
     clock = pygame.time.Clock()
 
-    # 🎮 Initialize joystick module
-    pygame.joystick.init()
-    if pygame.joystick.get_count() > 0:
-        joystick = pygame.joystick.Joystick(0)
-        joystick.init()
-        print(f"Detected controller: {joystick.get_name()}")
+    # We remove the single-joystick init so we don’t accidentally
+    # “lock” ourselves into only one controller recognized:
+    #
+    #   pygame.joystick.init()
+    #   if pygame.joystick.get_count() > 0:
+    #       joystick = pygame.joystick.Joystick(0)
+    #       joystick.init()
+    #       print(f"Detected controller: {joystick.get_name()}")
+    #
+    # Because game.py already does full joystick setup for multiple players.
 
     menu = Menu(screen)
     character_select = CharacterSelect(screen)
 
     running = True
     current_screen = "menu"
-    selected_character = None
+
+    # We'll hold the two characters the players pick
+    p1_character = None
+    p2_character = None
 
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.JOYBUTTONDOWN:
-                print(f"Joystick button {event.button} pressed")  # Debugging
 
-        # 🎮 Read Joystick Input (Move with Left Stick)
-        if pygame.joystick.get_count() > 0:
-            axis_x = joystick.get_axis(0)  # Left Stick X
-            axis_y = joystick.get_axis(1)  # Left Stick Y
-            if axis_x < -0.5:  # Move left
-                print("Joystick moving left")
-            if axis_x > 0.5:  # Move right
-                print("Joystick moving right")
-            if axis_y < -0.5:  # Jump
-                print("Joystick jumping")
-            if axis_y > 0.5:  # Fast fall
-                print("Joystick fast falling")
+            # If you still want to see debug info for ANY joystick button press while in the menu:
+            elif event.type == pygame.JOYBUTTONDOWN:
+                print(f"[MENU DEBUG] Joystick {event.joy} button {event.button} pressed")
 
         if current_screen == "menu":
             action = menu.run()
@@ -49,15 +45,23 @@ def main():
                 current_screen = "character_select"
             elif action == "Quit":
                 running = False
+
         elif current_screen == "character_select":
-            selected_character = character_select.run()
-            if selected_character:
-                print(f"Selected character: {selected_character}")
+            picks = character_select.run()
+            # `picks` is None if the user closed the window, 
+            # or a tuple (p1_char, p2_char) if both players locked in different characters.
+            if picks:
+                p1_character, p2_character = picks
+                print("P1 picked:", p1_character, " | P2 picked:", p2_character)
                 current_screen = "game"
             else:
+                # user escaped or closed; go back to menu
                 current_screen = "menu"
+
         elif current_screen == "game":
-            game_main()
+            # Pass both picks into the game
+            game_main(p1_character, p2_character)
+            # After the game exits, go back to menu
             current_screen = "menu"
 
         pygame.display.flip()
