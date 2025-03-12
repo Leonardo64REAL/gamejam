@@ -5,75 +5,85 @@ import time
 pygame.init()
 pygame.font.init()
 
+# Gather screen info
 info = pygame.display.Info()
 SCREEN_WIDTH = info.current_w
 SCREEN_HEIGHT = info.current_h
+
+# Fullscreen
 SCREEN = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.FULLSCREEN)
 
+# Load background image
 background_img = pygame.image.load("Assets/Images/background_2.png")
 background = pygame.transform.scale(background_img, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
+# Colors
 WHITE = (255, 255, 255)
-RED   = (255, 0, 0)
-GREEN = (0, 255, 0)
-BLUE  = (0, 0, 255)
+RED   = (255,   0,   0)
+GREEN = (0,   255,   0)
 
-# Platform sizes
-PLATFORM_WIDTH = int(SCREEN_WIDTH / 1.3)
-PLATFORM_HEIGHT = 100
-PLATFORM_X = (SCREEN_WIDTH - PLATFORM_WIDTH) // 2
-PLATFORM_Y = SCREEN_HEIGHT - 200
+# Platform sizing (scaled to the screen)
+PLATFORM_MAIN_WIDTH  = int(SCREEN_WIDTH * 0.77)
+PLATFORM_MAIN_HEIGHT = int(SCREEN_HEIGHT * 0.05)
+PLATFORM_MAIN_X      = (SCREEN_WIDTH - PLATFORM_MAIN_WIDTH) // 2
+PLATFORM_MAIN_Y      = int(SCREEN_HEIGHT * 0.8)
 
-MINI_PLATFORM_WIDTH = 330
-MINI_PLATFORM_HEIGHT = 30
-MINI_PLATFORM_X = 425
-MINI_PLATFORM_Y = 645
+# Two smaller "air" platforms
+PLATFORM_AIR_WIDTH  = int(SCREEN_WIDTH * 0.17)
+PLATFORM_AIR_HEIGHT = int(SCREEN_HEIGHT * 0.03)
 
-MINI_PLATFORM_WIDTH_2 = 330
-MINI_PLATFORM_HEIGHT_2 = 30
-MINI_PLATFORM_X_2 = 1180
-MINI_PLATFORM_Y_2 = 645
+PLATFORM_AIR_1_X = int(SCREEN_WIDTH * 0.22)
+PLATFORM_AIR_1_Y = int(SCREEN_HEIGHT * 0.6)
 
-# Player/game constants
-PLAYER_WIDTH = 100
+PLATFORM_AIR_2_X = int(SCREEN_WIDTH * 0.62)
+PLATFORM_AIR_2_Y = int(SCREEN_HEIGHT * 0.6)
+
+# Player & Attack constants
+PLAYER_WIDTH  = 100
 PLAYER_HEIGHT = 100
-PLAYER_SPEED = 10
-GRAVITY = 0.5
+PLAYER_SPEED  = 10
+GRAVITY       = 0.5
 JUMP_STRENGTH = 13
-MAX_LIVES = 3
-FALL_FAST = 15
+MAX_LIVES     = 3
+FALL_FAST     = 15
 
-# Attack constants
-ATTACK_COOLDOWN = 0.5
-RANGED_COOLDOWN = 0.5
-RANGED_LENGTH = 1
-RANGED_RELOAD = 3
-CUBE_LIFETIME = 0.01
-BASE_KNOCKBACK = 15
+ATTACK_COOLDOWN             = 0.5
+RANGED_COOLDOWN             = 0.5
+RANGED_LENGTH               = 1
+RANGED_RELOAD               = 3
+CUBE_LIFETIME               = 0.01
+BASE_KNOCKBACK              = 15
 KNOCKBACK_RESISTANCE_FACTOR = 0.1
 
-# Map names to images
+# Example dictionary for character images
 CHARACTER_IMAGES = {
-    "King Von":   "assets/images/kingvon.jpg",
-    "Tyler":      "assets/images/tyler.jpg",
+    "tyler": "assets/images/tyler.jpg",     # use "tyler" in lowercase if you want the bullet arc
+    "Tyler": "assets/images/tyler.jpg",     # or also handle uppercase if you prefer
+    "Hector": "assets/images/hector.jpg",
+    "King Von": "assets/images/kingvon.jpg",
     "Chief Keef": "assets/images/cheif.jpg",
-    "Hector":     "assets/images/hector.jpg",
 }
 
+#
+# Invisible Platform
+#
 class Platform(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height):
         super().__init__()
-        self.image = pygame.Surface((width, height))
-        self.image.fill((0, 0, 0, 0))  # Invisible
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+        # Use an alpha surface for invisibility
+        self.image = pygame.Surface((width, height), pygame.SRCALPHA)
+        self.image.fill((0, 0, 0, 0))  # fully transparent
+        self.rect = self.image.get_rect(x=x, y=y)
 
+#
+# Player class with double jump logic from your snippet
+#
 class Player(pygame.sprite.Sprite):
-    def __init__(self, x, y, color, controls, playable_character):
+    def __init__(self, x, y, color, playable_character, joystick_index):
         super().__init__()
-        # Load image if recognized
-        image_path = CHARACTER_IMAGES.get(playable_character, None)
+
+        # Load image or fallback color
+        image_path = CHARACTER_IMAGES.get(playable_character)
         if image_path:
             raw_img = pygame.image.load(image_path)
             self.image = pygame.transform.scale(raw_img, (PLAYER_WIDTH, PLAYER_HEIGHT))
@@ -86,6 +96,8 @@ class Player(pygame.sprite.Sprite):
         # Physics
         self.vel_x = 0
         self.vel_y = 0
+
+        # Double-jump state
         self.on_ground = False
         self.can_double_jump = True
         self.jump_count = 0
@@ -94,31 +106,36 @@ class Player(pygame.sprite.Sprite):
         # Stats
         self.lives = MAX_LIVES
         self.playable_character = playable_character
-        self.damage_knockback = 1
+        self.damage_knockback = 1  # accumulative knockback factor
+        self.last_direction = "none"
 
-        # Attacks
+        # Attack tracking
         self.last_attack_time = 0
         self.last_ranged_time = 0
-        self.last_direction = "none"
         self.bullet_count = RANGED_RELOAD
         self.can_shoot = True
 
-        self.controls = controls
+        # Joystick assignment
+        self.joystick = None
+        if joystick_index is not None and joystick_index >= 0:
+            if joystick_index < pygame.joystick.get_count():
+                self.joystick = pygame.joystick.Joystick(joystick_index)
+                self.joystick.init()
 
-    def update(self, platforms):
+    def update_physics(self, platforms):
         # Gravity
         self.vel_y += GRAVITY
         self.rect.y += self.vel_y
 
-        # Friction
+        # Basic friction
         self.rect.x += self.vel_x
         self.vel_x *= 0.9
 
-        # Collisions with platforms
+        # Collision check → resets jumps if we land
         self.on_ground = False
         for p in platforms:
             if self.rect.colliderect(p.rect):
-                # Landing on top
+                # landing on top
                 if self.vel_y > 0 and self.rect.bottom <= p.rect.bottom:
                     self.rect.bottom = p.rect.top
                     self.vel_y = 0
@@ -126,6 +143,43 @@ class Player(pygame.sprite.Sprite):
                     self.jump_count = 0
                     self.can_double_jump = True
 
+    #
+    # Joystick input
+    #
+    def handle_joystick_input(self, attack_sprites, current_time):
+        if not self.joystick:
+            return
+
+        axis_x = self.joystick.get_axis(0)
+        if axis_x < -0.5:
+            self.move_left()
+        elif axis_x > 0.5:
+            self.move_right()
+
+        # Buttons (adjust indices to match your controller)
+        # 0: jump, 1: fall, 2: normal attack, 3: upper attack, etc.
+        if self.joystick.get_button(0):  # Jump
+            self.jump()
+        else:
+            # if no jump button pressed this frame, reset jump_button_pressed
+            self.jump_button_pressed = False
+
+        if self.joystick.get_button(1):  # Fall
+            self.fall()
+        if self.joystick.get_button(2):  # Attack
+            self.attack(attack_sprites, current_time)
+        if self.joystick.get_button(3):  # Upper Attack
+            self.upperattack(attack_sprites, current_time)
+
+        # Additional buttons if desired
+        if self.joystick.get_button(4):
+            self.lowerattack(attack_sprites, current_time)
+        if self.joystick.get_button(5):
+            self.rangedattack(attack_sprites, current_time)
+
+    #
+    # Movement & Jump
+    #
     def move_left(self):
         self.rect.x -= PLAYER_SPEED
         self.last_direction = "left"
@@ -135,10 +189,12 @@ class Player(pygame.sprite.Sprite):
         self.last_direction = "right"
 
     def jump(self):
+        # First jump if on ground
         if self.on_ground:
             self.vel_y = -JUMP_STRENGTH
             self.jump_count += 1
             self.jump_button_pressed = True
+        # Second jump if not grounded but can_double_jump is True
         elif self.can_double_jump and self.jump_count < 2 and not self.jump_button_pressed:
             self.vel_y = -JUMP_STRENGTH
             self.jump_count += 1
@@ -149,28 +205,35 @@ class Player(pygame.sprite.Sprite):
         self.rect.y += FALL_FAST
 
     def respawn(self):
+        # Place at center, above main platform
         self.rect.x = SCREEN_WIDTH // 2 - PLAYER_WIDTH // 2
-        self.rect.y = PLATFORM_Y - PLAYER_HEIGHT
+        self.rect.y = PLATFORM_MAIN_Y - PLAYER_HEIGHT
         self.vel_x = 0
         self.vel_y = 0
         self.lives -= 1
+
+        # Reset knockback & jump
         self.damage_knockback = 1
         self.can_double_jump = True
+        self.jump_count = 0
 
+    #
+    # Basic Attacks
+    #
     def attack(self, attack_sprites, current_time):
-        if current_time - self.last_attack_time >= ATTACK_COOLDOWN:
+        if (current_time - self.last_attack_time) >= ATTACK_COOLDOWN:
             cube = Cube(self.rect.x, self.rect.y, self.last_direction)
             attack_sprites.add(cube)
             self.last_attack_time = current_time
 
     def upperattack(self, attack_sprites, current_time):
-        if current_time - self.last_attack_time >= ATTACK_COOLDOWN:
+        if (current_time - self.last_attack_time) >= ATTACK_COOLDOWN:
             upper_cube = upperCube(self.rect.x, self.rect.y, self.last_direction)
             attack_sprites.add(upper_cube)
             self.last_attack_time = current_time
 
     def lowerattack(self, attack_sprites, current_time):
-        if current_time - self.last_attack_time >= ATTACK_COOLDOWN:
+        if (current_time - self.last_attack_time) >= ATTACK_COOLDOWN:
             lower_cube = lowerCube(self.rect.x, self.rect.y, self.last_direction)
             attack_sprites.add(lower_cube)
             self.last_attack_time = current_time
@@ -188,46 +251,50 @@ class Player(pygame.sprite.Sprite):
             if self.bullet_count <= 0:
                 self.can_shoot = False
 
+        # Reload after some time
         if (current_time - self.last_ranged_time) >= RANGED_LENGTH:
             self.bullet_count = RANGED_RELOAD
             self.can_shoot = True
 
+    #
     # Knockback
+    #
     def apply_knockback(self, knockback_amount, direction):
         import math
         resistance = (1 + KNOCKBACK_RESISTANCE_FACTOR * self.damage_knockback)
-        knockback = knockback_amount * resistance
+        kb = knockback_amount * resistance
         if direction == "right":
-            self.vel_x = knockback
-            self.vel_y = -knockback * 0.4
+            self.vel_x = kb
+            self.vel_y = -kb * 0.4
         else:
-            self.vel_x = -knockback
-            self.vel_y = -knockback * 0.4
+            self.vel_x = -kb
+            self.vel_y = -kb * 0.4
         self.damage_knockback += resistance
 
     def apply_upper_knockback(self, knockback_amount, direction):
         resistance = (1 + KNOCKBACK_RESISTANCE_FACTOR * self.damage_knockback)
-        knockback = knockback_amount * resistance
+        kb = knockback_amount * resistance
         if direction == "right":
-            self.vel_x = knockback * 0.3
-            self.vel_y = -knockback * 0.4
+            self.vel_x = kb * 0.3
+            self.vel_y = -kb * 0.4
         else:
-            self.vel_x = -knockback * 0.3
-            self.vel_y = -knockback * 0.4
+            self.vel_x = -kb * 0.3
+            self.vel_y = -kb * 0.4
         self.damage_knockback += resistance
 
     def apply_lower_knockback(self, knockback_amount, direction):
         resistance = (1 + KNOCKBACK_RESISTANCE_FACTOR * self.damage_knockback)
-        knockback = knockback_amount * resistance
+        kb = knockback_amount * resistance
         if direction == "right":
-            self.vel_x = knockback * 0.3
-            self.vel_y = knockback * 0.5
+            self.vel_x = kb * 0.3
+            self.vel_y = kb * 0.5
         else:
-            self.vel_x = -knockback * 0.3
-            self.vel_y = knockback * 0.5
+            self.vel_x = -kb * 0.3
+            self.vel_y = kb * 0.5
         self.damage_knockback += resistance
 
     def apply_ranged_knockback(self, knockback_amount, direction):
+        # Slightly smaller effect
         if direction == "right":
             self.vel_x = 10
             self.vel_y = -5
@@ -237,15 +304,17 @@ class Player(pygame.sprite.Sprite):
         self.damage_knockback += 0.5
 
 
+#
 # Attack Sprites
+#
 class Cube(pygame.sprite.Sprite):
     def __init__(self, x, y, direction):
         super().__init__()
         self.image = pygame.Surface((PLAYER_WIDTH, PLAYER_HEIGHT))
         self.image.fill((25, 25, 25))
         self.rect = self.image.get_rect()
-        self.direction = direction
         self.creation_time = time.time()
+        self.direction = direction
         self.lifetime = CUBE_LIFETIME
 
         if direction == "right":
@@ -266,8 +335,8 @@ class upperCube(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y - 130
-        self.direction = direction
         self.creation_time = time.time()
+        self.direction = direction
         self.lifetime = CUBE_LIFETIME
 
     def update(self):
@@ -282,8 +351,8 @@ class lowerCube(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y + 130
-        self.direction = direction
         self.creation_time = time.time()
+        self.direction = direction
         self.lifetime = CUBE_LIFETIME
 
     def update(self):
@@ -297,7 +366,7 @@ class rangeCube(pygame.sprite.Sprite):
         self.image.fill(WHITE)
         self.rect = self.image.get_rect()
         self.direction = direction
-        self.player_type = player_type
+        self.player_type = player_type if player_type else ""
         self.creation_time = time.time()
         self.lifetime = RANGED_LENGTH
 
@@ -306,21 +375,27 @@ class rangeCube(pygame.sprite.Sprite):
         else:
             self.rect.x = x - 10
 
+        # Put it roughly in the middle of player vertically
         self.rect.y = y + (PLAYER_HEIGHT // 2) - 5
-        self.vel_y = -5 if (player_type == "Tyler") else 0
+
+        # "tyler" arcs upward
+        # (Comparing lowercase to match your snippet's logic)
+        if self.player_type.lower() == "tyler":
+            self.vel_y = -5
+        else:
+            self.vel_y = 0
 
     def update(self):
-        # expire after some time
         if (time.time() - self.creation_time) >= self.lifetime:
             self.kill()
             return
 
-        # if "Tyler", bullet arcs upward due to gravity
-        if self.player_type == "Tyler":
+        # If "tyler", bullet arcs upward due to gravity
+        if self.player_type and self.player_type.lower() == "tyler":
             self.vel_y += GRAVITY
             self.rect.y += self.vel_y
 
-        # horizontal movement
+        # Horizontal speed
         speed = 20
         if self.direction == "right":
             self.rect.x += speed
@@ -328,86 +403,62 @@ class rangeCube(pygame.sprite.Sprite):
             self.rect.x -= speed
 
 
+#
+# Main game loop
+#
 def main(p1_char, p2_char):
     """
-    p1_char: name of the character chosen for Player 1 (e.g. "Tyler")
-    p2_char: name of the character chosen for Player 2 (e.g. "Hector")
+    Launches the game with:
+      - Player 1 on Joystick #0
+      - Player 2 on Joystick #1
+      - Double jump logic from your snippet
+      - Invisible platforms
     """
     clock = pygame.time.Clock()
-
-    #
-    # 1) Initialize and pick joysticks for each player, if available
-    #
     pygame.joystick.init()
-    joysticks = []
-    for i in range(pygame.joystick.get_count()):
-        js = pygame.joystick.Joystick(i)
-        js.init()
-        joysticks.append(js)
 
-    # Force each player to have a different joystick index if possible
-    joystick1 = joysticks[0] if len(joysticks) > 0 else None
-    joystick2 = joysticks[1] if len(joysticks) > 1 else None
-
-    print(f"Detected {len(joysticks)} total joystick(s).")
-    if joystick1:
-        print(f"Player 1 using joystick #0: {joystick1.get_name()}, instanceID={joystick1.get_instance_id()}")
-    else:
-        print("Player 1 has no joystick (keyboard only).")
-
-    if joystick2:
-        print(f"Player 2 using joystick #1: {joystick2.get_name()}, instanceID={joystick2.get_instance_id()}")
-    else:
-        print("Player 2 has no joystick (keyboard only).")
-
-    #
-    # 2) Create two players
-    #
+    # Create Players
     player1 = Player(
-        x=SCREEN_WIDTH // 3,
-        y=PLATFORM_Y - PLAYER_HEIGHT,
-        color=RED,
-        controls={
-            "left": pygame.K_a,
-            "right": pygame.K_d,
-            "jump": pygame.K_w,
-            "fall": pygame.K_s,
-            "attack": pygame.K_x,
-            "upperattack": pygame.K_c,
-            "lowerattack": pygame.K_v,
-            "rangeattack": pygame.K_z,
-        },
-        playable_character=p1_char
+        x = SCREEN_WIDTH // 3,
+        y = PLATFORM_MAIN_Y - PLAYER_HEIGHT,
+        color = RED,
+        playable_character = p1_char,   # e.g. "tyler" or "Tyler"
+        joystick_index = 0
     )
-
     player2 = Player(
-        x=2 * SCREEN_WIDTH // 3,
-        y=PLATFORM_Y - PLAYER_HEIGHT,
-        color=GREEN,
-        controls={
-            "left": pygame.K_LEFT,
-            "right": pygame.K_RIGHT,
-            "jump": pygame.K_UP,
-            "fall": pygame.K_DOWN,
-            "attack": pygame.K_m,
-            "upperattack": pygame.K_n,
-            "lowerattack": pygame.K_b,
-            "rangeattack": pygame.K_COMMA
-        },
-        playable_character=p2_char
+        x = 2 * SCREEN_WIDTH // 3,
+        y = PLATFORM_MAIN_Y - PLAYER_HEIGHT,
+        color = GREEN,
+        playable_character = p2_char,
+        joystick_index = 1
     )
 
-    #
-    # 3) Setup sprite groups & platforms
-    #
     all_sprites = pygame.sprite.Group(player1, player2)
     attack_sprites = pygame.sprite.Group()
 
-    platform_main = Platform(PLATFORM_X, PLATFORM_Y, PLATFORM_WIDTH, PLATFORM_HEIGHT)
-    platform_small1 = Platform(MINI_PLATFORM_X, MINI_PLATFORM_Y, MINI_PLATFORM_WIDTH, MINI_PLATFORM_HEIGHT)
-    platform_small2 = Platform(MINI_PLATFORM_X_2, MINI_PLATFORM_Y_2, MINI_PLATFORM_WIDTH_2, MINI_PLATFORM_HEIGHT_2)
-    platforms = pygame.sprite.Group(platform_main, platform_small1, platform_small2)
+    # Create invisible scaled platforms
+    platform_main = Platform(
+        PLATFORM_MAIN_X,
+        PLATFORM_MAIN_Y,
+        PLATFORM_MAIN_WIDTH,
+        PLATFORM_MAIN_HEIGHT
+    )
+    platform_air_1 = Platform(
+        PLATFORM_AIR_1_X,
+        PLATFORM_AIR_1_Y,
+        PLATFORM_AIR_WIDTH,
+        PLATFORM_AIR_HEIGHT
+    )
+    platform_air_2 = Platform(
+        PLATFORM_AIR_2_X,
+        PLATFORM_AIR_2_Y,
+        PLATFORM_AIR_WIDTH,
+        PLATFORM_AIR_HEIGHT
+    )
 
+    platforms = pygame.sprite.Group(platform_main, platform_air_1, platform_air_2)
+
+    # Font for displaying lives
     font = pygame.font.Font("assets/fonts/smash_font.ttf", int(SCREEN_HEIGHT / 18))
 
     running = True
@@ -417,102 +468,19 @@ def main(p1_char, p2_char):
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.KEYDOWN:
+                # Press ESC to quit
                 if event.key == pygame.K_ESCAPE:
                     running = False
 
-        #
-        # 4) Read input for Player 1
-        #
-        # If joystick1 is present, check its axis/buttons. Otherwise do keyboard only.
-        if joystick1:
-            axis_x = joystick1.get_axis(0)
-            if axis_x < -0.5:
-                player1.move_left()
-            elif axis_x > 0.5:
-                player1.move_right()
+        # Player 1 joystick input
+        player1.handle_joystick_input(attack_sprites, current_time)
+        # Player 2 joystick input
+        player2.handle_joystick_input(attack_sprites, current_time)
 
-            if joystick1.get_button(0):  # jump
-                player1.jump()
-            if joystick1.get_button(1):  # fall
-                player1.fall()
-            if joystick1.get_button(2):  # attack
-                player1.attack(attack_sprites, current_time)
-            if joystick1.get_button(3):  # upper attack
-                player1.upperattack(attack_sprites, current_time)
-
-        # Also allow keyboard fallback
-        keys = pygame.key.get_pressed()
-        if keys[player1.controls["left"]]:
-            player1.move_left()
-        if keys[player1.controls["right"]]:
-            player1.move_right()
-        if keys[player1.controls["jump"]]:
-            if not player1.jump_button_pressed:
-                player1.jump()
-            player1.jump_button_pressed = True
-        else:
-            player1.jump_button_pressed = False
-        if keys[player1.controls["fall"]]:
-            player1.fall()
-
-        if keys[player1.controls["attack"]]:
-            player1.attack(attack_sprites, current_time)
-        if keys[player1.controls["upperattack"]]:
-            player1.upperattack(attack_sprites, current_time)
-        if keys[player1.controls["lowerattack"]]:
-            player1.lowerattack(attack_sprites, current_time)
-        if keys[player1.controls["rangeattack"]]:
-            player1.rangedattack(attack_sprites, current_time)
-
-        #
-        # 5) Read input for Player 2
-        #
-        # If joystick2 is present, check axis/buttons. Otherwise do keyboard only.
-        if joystick2:
-            axis_x_2 = joystick2.get_axis(0)
-            if axis_x_2 < -0.5:
-                player2.move_left()
-            elif axis_x_2 > 0.5:
-                player2.move_right()
-
-            if joystick2.get_button(0):  # jump
-                player2.jump()
-            if joystick2.get_button(1):  # fall
-                player2.fall()
-            if joystick2.get_button(2):  # attack
-                player2.attack(attack_sprites, current_time)
-            if joystick2.get_button(3):  # upper attack
-                player2.upperattack(attack_sprites, current_time)
-
-        # Also allow keyboard fallback
-        if keys[player2.controls["left"]]:
-            player2.move_left()
-        if keys[player2.controls["right"]]:
-            player2.move_right()
-        if keys[player2.controls["jump"]]:
-            if not player2.jump_button_pressed:
-                player2.jump()
-            player2.jump_button_pressed = True
-        else:
-            player2.jump_button_pressed = False
-        if keys[player2.controls["fall"]]:
-            player2.fall()
-
-        if keys[player2.controls["attack"]]:
-            player2.attack(attack_sprites, current_time)
-        if keys[player2.controls["upperattack"]]:
-            player2.upperattack(attack_sprites, current_time)
-        if keys[player2.controls["lowerattack"]]:
-            player2.lowerattack(attack_sprites, current_time)
-        if keys[player2.controls["rangeattack"]]:
-            player2.rangedattack(attack_sprites, current_time)
-
-        #
-        # 6) Handle off-screen respawn for each
-        #
+        # Off-screen check → respawn
         for p in [player1, player2]:
-            off_screen_y = p.rect.y > SCREEN_HEIGHT + SCREEN_HEIGHT // 2 or p.rect.y < -SCREEN_HEIGHT // 2
-            off_screen_x = p.rect.x < -SCREEN_WIDTH // 2 or p.rect.x > SCREEN_WIDTH + SCREEN_WIDTH // 2
+            off_screen_y = (p.rect.y > SCREEN_HEIGHT + SCREEN_HEIGHT // 2) or (p.rect.y < -SCREEN_HEIGHT // 2)
+            off_screen_x = (p.rect.x < -SCREEN_WIDTH // 2) or (p.rect.x > SCREEN_WIDTH + SCREEN_WIDTH // 2)
             if off_screen_y or off_screen_x:
                 if p.lives > 1:
                     p.respawn()
@@ -520,20 +488,14 @@ def main(p1_char, p2_char):
                     all_sprites.remove(p)
                     p.lives = 0
 
-        #
-        # 7) Update players (apply gravity, collisions, etc.)
-        #
-        player1.update(platforms)
-        player2.update(platforms)
+        # Update physics
+        player1.update_physics(platforms)
+        player2.update_physics(platforms)
 
-        #
-        # 8) Update attack sprites
-        #
+        # Update attack sprites
         attack_sprites.update()
 
-        #
-        # 9) Check collisions (knockback)
-        #
+        # Collision check with attacks → apply knockback
         for p in [player1, player2]:
             collided = pygame.sprite.spritecollide(p, attack_sprites, dokill=True)
             for atk in collided:
@@ -547,14 +509,17 @@ def main(p1_char, p2_char):
                 elif isinstance(atk, rangeCube):
                     p.apply_ranged_knockback(BASE_KNOCKBACK, direction)
 
-        #
-        # 10) Draw everything
-        #
+        # Render
         SCREEN.blit(background, (0, 0))
+
+        # Draw players and attacks
         all_sprites.draw(SCREEN)
         attack_sprites.draw(SCREEN)
 
-        # Show P1 vs. P2 lives
+        # Draw invisible platforms (still needed for collisions)
+        platforms.draw(SCREEN)
+
+        # Display lives
         lives_text1 = font.render(f"P1 Lives: {player1.lives}", True, RED)
         lives_text2 = font.render(f"P2 Lives: {player2.lives}", True, GREEN)
 
@@ -573,8 +538,3 @@ def main(p1_char, p2_char):
 
     pygame.quit()
     sys.exit()
-
-
-if __name__ == "__main__":
-    # Test defaults
-    main("Tyler", "Hector")

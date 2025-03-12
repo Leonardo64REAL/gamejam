@@ -9,16 +9,9 @@ def main():
     pygame.display.set_caption("Super Smash Bros. Pygame Edition")
     clock = pygame.time.Clock()
 
-    # We remove the single-joystick init so we don’t accidentally
-    # “lock” ourselves into only one controller recognized:
-    #
-    #   pygame.joystick.init()
-    #   if pygame.joystick.get_count() > 0:
-    #       joystick = pygame.joystick.Joystick(0)
-    #       joystick.init()
-    #       print(f"Detected controller: {joystick.get_name()}")
-    #
-    # Because game.py already does full joystick setup for multiple players.
+    # IMPORTANT: We do NOT call pygame.joystick.init() here,
+    # because in game.py we will handle the multi-joystick setup.
+    # Doing so here might “lock in” a single recognized controller.
 
     menu = Menu(screen)
     character_select = CharacterSelect(screen)
@@ -35,7 +28,7 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
-            # If you still want to see debug info for ANY joystick button press while in the menu:
+            # This is purely optional debug info while in the menu:
             elif event.type == pygame.JOYBUTTONDOWN:
                 print(f"[MENU DEBUG] Joystick {event.joy} button {event.button} pressed")
 
@@ -48,8 +41,8 @@ def main():
 
         elif current_screen == "character_select":
             picks = character_select.run()
-            # `picks` is None if the user closed the window, 
-            # or a tuple (p1_char, p2_char) if both players locked in different characters.
+            # `picks` is None if the user closed the window,
+            # or a tuple (p1_char, p2_char) if both players locked in characters.
             if picks:
                 p1_character, p2_character = picks
                 print("P1 picked:", p1_character, " | P2 picked:", p2_character)
@@ -59,9 +52,9 @@ def main():
                 current_screen = "menu"
 
         elif current_screen == "game":
-            # Pass both picks into the game
+            # Pass both picks into the new game logic
             game_main(p1_character, p2_character)
-            # After the game exits, go back to menu
+            # After the game closes, return to menu
             current_screen = "menu"
 
         pygame.display.flip()
