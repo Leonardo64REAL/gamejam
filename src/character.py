@@ -34,8 +34,19 @@ class CharacterSelect:
         self.character3_image = pygame.image.load("assets/images/cheif.jpg")
         self.character4_image = pygame.image.load("assets/images/hector.jpg")
 
+        self.fade_speed = 3  # Hvor raskt fade-in skal skje (høyere tall = raskere)
+        self.alpha = 0  # Startverdi for gjennomsiktighet
+
+
     def draw(self):
         self.screen.fill((0, 0, 0))
+
+        # Oppdater gjennomsiktigheten for fade-in effekt
+        if self.alpha < 255:  # 255 er fullt synlig
+            self.alpha += self.fade_speed
+            if self.alpha > 255:
+                self.alpha = 255
+            self.screen.set_alpha(self.alpha)
 
         # Title
         title = self.font.render("Select Your Characters", True, (255, 255, 255))

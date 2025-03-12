@@ -5,6 +5,13 @@ from game import main as game_main
 
 def main():
     pygame.init()
+    # Initialize the audio mixer
+    pygame.mixer.init()
+
+    # Load menu screen music
+    pygame.mixer.music.load("Assets/Audio/menu.mp3")
+    # Loop forever: -1 means infinite loops
+    pygame.mixer.music.play(-1, 0.0, 3000)
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_caption("Super Smash Bros. Pygame Edition")
     clock = pygame.time.Clock()
@@ -52,6 +59,10 @@ def main():
                 current_screen = "menu"
 
         elif current_screen == "game":
+            #start music
+            pygame.mixer.music.fadeout(3000)  # Stop current track
+            pygame.mixer.music.load("Assets/Audio/battle.mp3")
+            pygame.mixer.music.play(-1, 0.0, 3000)
             # Pass both picks into the new game logic
             game_main(p1_character, p2_character)
             # After the game closes, return to menu
