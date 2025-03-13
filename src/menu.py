@@ -54,7 +54,7 @@ class Menu:
             self.screen.blit(text, text_rect)
 
         # Tegn instruksjoner for navigering
-        instructions = self.small_font.render("Use UP/DOWN to navigate, ENTER to select", True, (128, 128, 128))
+        instructions = self.small_font.render("Use UP/DOWN to navigate, X to select", True, (128, 128, 128))
         instructions_rect = instructions.get_rect(center=(self.screen_width // 2, self.screen_height - self.screen_height // 10))  # Nederst på skjermen
         self.screen.blit(instructions, instructions_rect)
 

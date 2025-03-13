@@ -1,6 +1,8 @@
 import pygame
 from menu import Menu
 from character import CharacterSelect
+# Note: Be sure to remove or comment out any `pygame.quit()` or `sys.exit()` calls
+# at the END of your `game.py` so that `game_main(...)` can simply return when done.
 from game import main as game_main
 
 def main():
@@ -12,13 +14,15 @@ def main():
     pygame.mixer.music.load("Assets/Audio/menu.mp3")
     # Loop forever: -1 means infinite loops
     pygame.mixer.music.play(-1, 0.0, 3000)
+
+    # Fullscreen setup
     screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_caption("Super Smash Bros. Pygame Edition")
+
     clock = pygame.time.Clock()
 
     # IMPORTANT: We do NOT call pygame.joystick.init() here,
-    # because in game.py we will handle the multi-joystick setup.
-    # Doing so here might “lock in” a single recognized controller.
+    # because in game.py we handle the multi-joystick setup.
 
     menu = Menu(screen)
     character_select = CharacterSelect(screen)
@@ -35,7 +39,7 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
 
-            # This is purely optional debug info while in the menu:
+            # Purely optional debug info while in the menu:
             elif event.type == pygame.JOYBUTTONDOWN:
                 print(f"[MENU DEBUG] Joystick {event.joy} button {event.button} pressed")
 
@@ -59,13 +63,17 @@ def main():
                 current_screen = "menu"
 
         elif current_screen == "game":
-            #start music
-            pygame.mixer.music.fadeout(3000)  # Stop current track
+            # Fade out the current track, load battle music, play in a loop
+            pygame.mixer.music.fadeout(3000)
             pygame.mixer.music.load("Assets/Audio/battle.mp3")
             pygame.mixer.music.play(-1, 0.0, 3000)
+
             # Pass both picks into the new game logic
+            # Be sure `game_main()` ends with `return` (not `sys.exit()`),
+            # so we can come back here afterward.
             game_main(p1_character, p2_character)
-            # After the game closes, return to menu
+
+            # After the game_main function returns, go back to the menu
             current_screen = "menu"
 
         pygame.display.flip()
