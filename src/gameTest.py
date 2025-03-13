@@ -93,7 +93,10 @@ class Player(pygame.sprite.Sprite):
         self.last_attack_time = 0
         self.last_ranged_time = 0
         self.last_direction = "none"  # "left" or "right"
-        self.bullet_count = RANGED_RELOAD
+        if playable_character == "hector":
+            self.bullet_count = 2
+        else:
+            self.bullet_count = RANGED_RELOAD
         self.can_shoot = True
 
         self.controls = controls
@@ -239,11 +242,19 @@ class Player(pygame.sprite.Sprite):
         """Knockback specifically for ranged attacks (slightly weaker)."""
         # You can make this scale up similarly if desired
         if direction == "right":
-            self.vel_x = 10
-            self.vel_y = -5
+            if self.playable_character != "hector":
+                self.vel_x = 15
+                self.vel_y = -5
+            else:
+                self.vel_x = 10
+                self.vel_y = -5
         else:
-            self.vel_x = -10
-            self.vel_y = -5
+            if self.playable_character != "hector":
+                self.vel_x = -15
+                self.vel_y = -5
+            else:
+                self.vel_x = -10
+                self.vel_y = -5
 
         self.damage_knockback += 0.5
 
@@ -308,24 +319,32 @@ class rangeCube(pygame.sprite.Sprite):
     """Ranged projectile. Different characters can behave differently."""
     def __init__(self, x, y, direction, player_type):
         super().__init__()
-        self.image = pygame.Surface((10, 10))
-        self.image.fill(WHITE)
-        self.rect = self.image.get_rect()
         self.direction = direction
         self.player_type = player_type
 
-        if direction == "right":
-            self.rect.x = x + PLAYER_WIDTH
+        # Initialize the image and rect attributes
+        if player_type == "hector":
+            self.image = pygame.Surface((50, 50))
         else:
-            self.rect.x = x - 10
-        # Middle of player's height
-        self.rect.y = y + (PLAYER_HEIGHT // 2) - 5
+            self.image = pygame.Surface((10, 10))
+        self.image.fill(WHITE)
+        self.rect = self.image.get_rect()
+
+        # Set the initial position based on the direction
+        if player_type == "hector":
+            self.rect.x = x + PLAYER_WIDTH if direction == "right" else x - PLAYER_WIDTH + PLAYER_WIDTH // 3
+            self.rect.y = y + (PLAYER_HEIGHT // 4)
+            self.vel_y = -5
+        elif player_type == "tyler":
+            self.rect.x = x + PLAYER_WIDTH if direction == "right" else x - 10
+            self.rect.y = y + (PLAYER_HEIGHT // 2) - 5
+            self.vel_y = -5
+        else:
+            self.rect.x = x + PLAYER_WIDTH if direction == "right" else x - 10
+            self.rect.y = y + (PLAYER_HEIGHT // 2) - 5
 
         self.creation_time = time.time()
         self.lifetime = RANGED_LENGTH
-
-        # Gravity-like effect for "tyler" or any special char
-        self.vel_y = -5 if (player_type == "tyler") else 0
 
     def update(self):
         if (time.time() - self.creation_time) >= self.lifetime:
@@ -333,7 +352,7 @@ class rangeCube(pygame.sprite.Sprite):
             return
 
         # If "tyler", apply simple gravity
-        if self.player_type == "tyler":
+        if self.player_type == "tyler" or self.player_type == "hector":
             self.vel_y += GRAVITY
             self.rect.y += self.vel_y
 
@@ -362,7 +381,7 @@ def main():
             "lowerattack": pygame.K_v,
             "rangeattack": pygame.K_z,
         },
-        playable_character="tyler"
+        playable_character="hector"
     )
     player2 = Player(
         SCREEN_WIDTH // 2, PLATFORM_Y - PLAYER_HEIGHT, GREEN,
