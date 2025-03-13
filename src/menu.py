@@ -73,6 +73,11 @@ class Menu:
 
     def run(self):
         running = True
+        pygame.init()
+        pygame.mixer.init()
+
+        pygame.mixer.music.load("Assets/Audio/menu.mp3")
+        pygame.mixer.music.play(-1, 0.0, 3000)
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

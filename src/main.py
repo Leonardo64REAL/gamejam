@@ -1,5 +1,6 @@
 import pygame
 from menu import Menu
+from settings import play_video_and_audio
 from character import CharacterSelect
 from game import main as game_main
 
@@ -38,6 +39,9 @@ def main():
                 # Re-initialize the character select screen each time
                 character_select = CharacterSelect(screen)
                 current_screen = "character_select"
+            elif action == "Settings":
+                current_screen = play_video_and_audio(screen)
+                current_screen = "menu"
             elif action == "Quit":
                 running = False
 
