@@ -198,16 +198,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += PLAYER_SPEED
         self.last_direction = "right"
 
-    # ------------------------
-    #   REWRITTEN DOUBLE JUMP
-    # ------------------------
     def jump(self):
-        """
-        Clean, proper double-jump logic:
-        - First jump if on_ground.
-        - Second jump if can_double_jump is still True.
-        - Avoid repeated jumps in a single button press by using jump_button_pressed.
-        """
         if not self.jump_button_pressed:
             if self.on_ground:
                 self.vel_y = -JUMP_STRENGTH
@@ -484,14 +475,14 @@ def main(p1_char, p2_char):
         y=PLATFORM_MAIN_Y - PLAYER_HEIGHT,
         color=RED,
         playable_character=p1_char,
-        joystick_index=0
+        joystick_index=1
     )
     player2 = Player(
         x=2 * SCREEN_WIDTH // 3,
         y=PLATFORM_MAIN_Y - PLAYER_HEIGHT,
         color=GREEN,
         playable_character=p2_char,
-        joystick_index=1
+        joystick_index=0
     )
 
     all_sprites = pygame.sprite.Group(player1, player2)
@@ -584,10 +575,10 @@ def main(p1_char, p2_char):
         lives_text1 = font.render(f"P1 Lives: {player1.lives}", True, RED)
         lives_text2 = font.render(f"P2 Lives: {player2.lives}", True, GREEN)
         text_rect1 = lives_text1.get_rect(
-            center=((SCREEN_WIDTH // 2) + SCREEN_WIDTH // 15, SCREEN_HEIGHT - SCREEN_HEIGHT // 15)
+            center=(SCREEN_WIDTH // 4, SCREEN_HEIGHT - SCREEN_HEIGHT // 15)
         )
         text_rect2 = lives_text2.get_rect(
-            center=((SCREEN_WIDTH // 2) - SCREEN_WIDTH // 15, SCREEN_HEIGHT - SCREEN_HEIGHT // 15)
+            center=((SCREEN_WIDTH) - SCREEN_WIDTH // 4, SCREEN_HEIGHT - SCREEN_HEIGHT // 15)
         )
         SCREEN.blit(lives_text1, text_rect1)
         SCREEN.blit(lives_text2, text_rect2)
