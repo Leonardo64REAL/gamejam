@@ -2,6 +2,10 @@ import pygame
 import sys
 import time
 
+# 1) ADD THESE TWO IMPORTS
+import cv2
+import numpy as np
+
 pygame.init()
 pygame.font.init()
 
@@ -60,6 +64,7 @@ CHARACTER_IMAGES = {
     "Chief Keef": "assets/images/cheif.jpg",
 }
 
+
 #
 # Platform class
 #
@@ -71,6 +76,7 @@ class Platform(pygame.sprite.Sprite):
         self.image.fill((0, 0, 0, 0))  # fully transparent
         self.rect = self.image.get_rect(x=x, y=y)
         self.is_air = is_air  # used to skip collision if player is fast falling
+
 
 #
 # Player class with double jump and is_fast_falling
@@ -176,7 +182,6 @@ class Player(pygame.sprite.Sprite):
             self.attack(attack_sprites, current_time)
         if self.joystick.get_button(3):
             self.upperattack(attack_sprites, current_time)
-
         if self.joystick.get_button(4):
             self.lowerattack(attack_sprites, current_time)
         if self.joystick.get_button(5):
@@ -408,6 +413,51 @@ class rangeCube(pygame.sprite.Sprite):
             self.rect.x -= speed
 
 
+# 2) ADD THIS FUNCTION TO PLAY "hector.mp4"
+def play_victory_video(screen):
+    """
+    Plays the 'hector.mp4' victory video in full, blocking until it finishes
+    or user closes the window. There is NO skip feature: it will play fully.
+    """
+    cap = cv2.VideoCapture("Assets/Videos/Hector_win.mp4")
+    clock = pygame.time.Clock()
+
+    # Optional: fix the FPS if you want a certain speed
+    # We'll just read frames as fast as we can, or ~30 fps
+    desired_fps = 30  
+
+    playing = True
+    while playing:
+        ret, frame = cap.read()
+        if not ret:
+            # no more frames, video ended
+            break
+
+        frame = cv2.flip(frame, 2)
+        #convert from BGR to RGB
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # Possibly resize to fill screen
+        frame_rgb = cv2.resize(frame_rgb, (screen.get_width(), screen.get_height()))
+
+        # OpenCV images come as (height, width, 3), so rotate
+        # We'll just do surfarray with a swapaxes or np.rot90, but let's do it quickly:
+        frame_rgb = np.rot90(frame_rgb)  # rotate 90 deg
+        surf = pygame.surfarray.make_surface(frame_rgb)
+
+        # Draw the frame
+        screen.blit(surf, (0, 0))
+        pygame.display.flip()
+
+        # Check events (we do NOT skip with key presses, only check for QUIT)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                playing = False
+
+        clock.tick(desired_fps)
+
+    cap.release()
+
+
 #
 # Main game loop
 #
@@ -547,5 +597,14 @@ def main(p1_char, p2_char):
         pygame.display.flip()
         clock.tick(60)
 
+        alive_players = sum([1 for p in [player1, player2] if p.lives > 0])
+        if alive_players <= 1:
+            # We have zero or one players left => match is over
+            running = False
+
+    # Once match is done, we show the victory video for "hector" no matter who actually won
+    play_victory_video(SCREEN)
+
     pygame.quit()
     sys.exit()
+ 
