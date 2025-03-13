@@ -427,7 +427,7 @@ def play_victory_video(screen, winner_character):
     # (Change these filenames as appropriate for your actual video files)
     victory_videos = {
         "hector":     "Assets/Videos/Hector_win.mp4",
-        "tyler":      "Assets/Videos/Tyler_win.mp4",
+        "tyler":      "Assets/Videos/tyler_win.mp4",
         "king von":   "Assets/Videos/KingVon_win.mp4",
         "chief keef": "Assets/Videos/keef_win.mp4"
     }
@@ -475,14 +475,14 @@ def main(p1_char, p2_char):
         y=PLATFORM_MAIN_Y - PLAYER_HEIGHT,
         color=RED,
         playable_character=p1_char,
-        joystick_index=1
+        joystick_index=0
     )
     player2 = Player(
         x=2 * SCREEN_WIDTH // 3,
         y=PLATFORM_MAIN_Y - PLAYER_HEIGHT,
         color=GREEN,
         playable_character=p2_char,
-        joystick_index=0
+        joystick_index=1
     )
 
     all_sprites = pygame.sprite.Group(player1, player2)
