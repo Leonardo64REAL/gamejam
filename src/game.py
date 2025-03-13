@@ -64,7 +64,6 @@ CHARACTER_IMAGES = {
     "Chief Keef": "assets/images/cheif.jpg",
 }
 
-
 #
 # Platform class
 #
@@ -76,7 +75,6 @@ class Platform(pygame.sprite.Sprite):
         self.image.fill((0, 0, 0, 0))  # fully transparent
         self.rect = self.image.get_rect(x=x, y=y)
         self.is_air = is_air  # used to skip collision if player is fast falling
-
 
 #
 # Player class with double jump and is_fast_falling
@@ -166,7 +164,7 @@ class Player(pygame.sprite.Sprite):
             self.move_right()
 
         # Buttons
-        # 0 = jump, 1 = fall, 2 = normal attack, 3 = upper attack, etc.
+        # 0 = jump, 1 = fall, 2 = normal attack, 3 = upper attack, 4/5/6/7 vary by controller
         if self.joystick.get_button(0):  # Jump
             self.jump()
         else:
@@ -182,9 +180,10 @@ class Player(pygame.sprite.Sprite):
             self.attack(attack_sprites, current_time)
         if self.joystick.get_button(3):
             self.upperattack(attack_sprites, current_time)
-        if self.joystick.get_button(5):
+        if self.joystick.get_button(10):
             self.lowerattack(attack_sprites, current_time)
-        if self.joystick.get_button(7):
+        r2_value = self.joystick.get_axis(5)  
+        if r2_value > 0.5:                    
             self.rangedattack(attack_sprites, current_time)
 
     #
@@ -312,7 +311,6 @@ class Player(pygame.sprite.Sprite):
 
     def apply_ranged_knockback(self, knockback_amount, direction):
         """Knockback specifically for ranged attacks (slightly weaker)."""
-        # You can make this scale up similarly if desired
         if direction == "right":
             if self.playable_character != "Hector":
                 self.vel_x = 15
@@ -329,7 +327,6 @@ class Player(pygame.sprite.Sprite):
                 self.vel_y = -5
 
         self.damage_knockback += 0.5
-
 
 #
 # Attack Sprites
@@ -427,7 +424,6 @@ class rangeCube(pygame.sprite.Sprite):
         else:
             self.rect.x -= speed
 
-
 # 2) REWRITE THIS FUNCTION TO PLAY DIFFERENT VIDEOS BASED ON WHICH CHARACTER WINS
 def play_victory_video(screen, winner_character):
     """
@@ -439,7 +435,7 @@ def play_victory_video(screen, winner_character):
     victory_videos = {
         "hector":     "Assets/Videos/Hector_win.mp4",
         "tyler":      "Assets/Videos/tyler_win.mp4",
-        "king von":   "Assets/Videos/KingVon_win.mp4",
+        "king von":   "Assets/Videos/von_wins.mp4",
         "chief keef": "Assets/Videos/keef_win.mp4"
     }
 
@@ -471,7 +467,6 @@ def play_victory_video(screen, winner_character):
         clock.tick(desired_fps)
 
     cap.release()
-
 
 #
 # Main game loop
