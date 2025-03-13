@@ -7,7 +7,7 @@ class CharacterSelect:
 
         # Font setup
         self.font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 10))
-        self.small_font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 25))
+        self.small_font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 30))
 
         # Available characters
         self.characters = ["King Von", "Tyler", "Chief Keef", "Hector"]
