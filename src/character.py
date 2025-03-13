@@ -7,7 +7,7 @@ class CharacterSelect:
 
         # Font setup
         self.font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 10))
-        self.small_font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 25))
+        self.small_font = pygame.font.Font("assets/fonts/smash_font.ttf", int(self.screen_height / 35))
 
         # Available characters
         self.characters = ["King Von", "Tyler", "Chief Keef", "Hector"]
@@ -103,7 +103,7 @@ class CharacterSelect:
 
         # Instructions
         instructions = self.small_font.render(
-            "Arrow keys (P1) / Press ENTER to lock. Then arrow keys (P2) / ENTER to lock. No duplicates!",
+            "choose, then press x to lock in character",
             True,
             (128, 128, 128)
         )

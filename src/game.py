@@ -2,6 +2,10 @@ import pygame
 import sys
 import time
 
+# 1) ADD THESE TWO IMPORTS
+import cv2
+import numpy as np
+
 pygame.init()
 pygame.font.init()
 
@@ -60,6 +64,7 @@ CHARACTER_IMAGES = {
     "Chief Keef": "assets/images/cheif.jpg",
 }
 
+
 #
 # Platform class
 #
@@ -71,6 +76,7 @@ class Platform(pygame.sprite.Sprite):
         self.image.fill((0, 0, 0, 0))  # fully transparent
         self.rect = self.image.get_rect(x=x, y=y)
         self.is_air = is_air  # used to skip collision if player is fast falling
+
 
 #
 # Player class with double jump and is_fast_falling
@@ -176,10 +182,9 @@ class Player(pygame.sprite.Sprite):
             self.attack(attack_sprites, current_time)
         if self.joystick.get_button(3):
             self.upperattack(attack_sprites, current_time)
-
-        if self.joystick.get_button(4):
-            self.lowerattack(attack_sprites, current_time)
         if self.joystick.get_button(5):
+            self.lowerattack(attack_sprites, current_time)
+        if self.joystick.get_button(7):
             self.rangedattack(attack_sprites, current_time)
 
     #
@@ -193,15 +198,28 @@ class Player(pygame.sprite.Sprite):
         self.rect.x += PLAYER_SPEED
         self.last_direction = "right"
 
+    # ------------------------
+    #   REWRITTEN DOUBLE JUMP
+    # ------------------------
     def jump(self):
-        if self.on_ground:
-            self.vel_y = -JUMP_STRENGTH
-            self.jump_count += 1
-            self.jump_button_pressed = True
-        elif self.can_double_jump and self.jump_count < 2 and not self.jump_button_pressed:
-            self.vel_y = -JUMP_STRENGTH
-            self.jump_count += 1
-            self.can_double_jump = False
+        """
+        Clean, proper double-jump logic:
+        - First jump if on_ground.
+        - Second jump if can_double_jump is still True.
+        - Avoid repeated jumps in a single button press by using jump_button_pressed.
+        """
+        if not self.jump_button_pressed:
+            if self.on_ground:
+                self.vel_y = -JUMP_STRENGTH
+                self.jump_button_pressed = True
+                self.on_ground = False
+                self.jump_count = 1
+                self.can_double_jump = True
+            elif self.can_double_jump:
+                self.vel_y = -JUMP_STRENGTH
+                self.jump_button_pressed = True
+                self.can_double_jump = False
+                self.jump_count += 1
 
     def fall(self):
         # Start fast falling
@@ -408,6 +426,51 @@ class rangeCube(pygame.sprite.Sprite):
             self.rect.x -= speed
 
 
+# 2) REWRITE THIS FUNCTION TO PLAY DIFFERENT VIDEOS BASED ON WHICH CHARACTER WINS
+def play_victory_video(screen, winner_character):
+    """
+    Plays a character-specific victory video in full, blocking until it finishes
+    or user closes the window. There is NO skip feature: it will play fully.
+    """
+    # Map each character to a victory video
+    # (Change these filenames as appropriate for your actual video files)
+    victory_videos = {
+        "hector":     "Assets/Videos/Hector_win.mp4",
+        "tyler":      "Assets/Videos/Tyler_win.mp4",
+        "king von":   "Assets/Videos/KingVon_win.mp4",
+        "chief keef": "Assets/Videos/keef_win.mp4"
+    }
+
+    # Default to Hector's video if not found
+    video_path = victory_videos.get(winner_character.lower(), "Assets/Videos/Hector_win.mp4")
+    cap = cv2.VideoCapture(video_path)
+    clock = pygame.time.Clock()
+
+    desired_fps = 30
+    playing = True
+    while playing:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame = cv2.flip(frame, 2)
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame_rgb = cv2.resize(frame_rgb, (screen.get_width(), screen.get_height()))
+        frame_rgb = np.rot90(frame_rgb)
+        surf = pygame.surfarray.make_surface(frame_rgb)
+
+        screen.blit(surf, (0, 0))
+        pygame.display.flip()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                playing = False
+
+        clock.tick(desired_fps)
+
+    cap.release()
+
+
 #
 # Main game loop
 #
@@ -547,5 +610,21 @@ def main(p1_char, p2_char):
         pygame.display.flip()
         clock.tick(60)
 
-    pygame.quit()
-    sys.exit()
+        alive_players = sum([1 for p in [player1, player2] if p.lives > 0])
+        if alive_players <= 1:
+            # We have zero or one players left => match is over
+            running = False
+
+    # Determine which player is still alive (if any), and play their victory video
+    winner_character = None
+    if player1.lives > 0:
+        winner_character = player1.playable_character
+    elif player2.lives > 0:
+        winner_character = player2.playable_character
+    else:
+        # If somehow both are at 0, just default to "Hector"
+        winner_character = "Hector"
+
+    play_victory_video(SCREEN, winner_character)
+
+    return
