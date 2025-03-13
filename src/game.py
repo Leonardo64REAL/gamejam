@@ -320,12 +320,23 @@ class Player(pygame.sprite.Sprite):
         self.damage_knockback += resistance
 
     def apply_ranged_knockback(self, knockback_amount, direction):
+        """Knockback specifically for ranged attacks (slightly weaker)."""
+        # You can make this scale up similarly if desired
         if direction == "right":
-            self.vel_x = 10
-            self.vel_y = -5
+            if self.playable_character != "Hector":
+                self.vel_x = 15
+                self.vel_y = -5
+            else:
+                self.vel_x = 10
+                self.vel_y = -5
         else:
-            self.vel_x = -10
-            self.vel_y = -5
+            if self.playable_character != "Hector":
+                self.vel_x = -15
+                self.vel_y = -5
+            else:
+                self.vel_x = -10
+                self.vel_y = -5
+
         self.damage_knockback += 0.5
 
 
